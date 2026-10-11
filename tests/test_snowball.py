@@ -11,6 +11,7 @@ from litresearch.config import get_settings
 from litresearch.nodes.snowball import (
     _auto_seeds,
     _is_saturated,
+    expand_snowball,
     plan_snowball,
     should_snowball,
 )
@@ -266,3 +267,79 @@ class TestBreadthLimits:
         state["snowball_seeds"] = [{"doc_id": "doc_0001", "direction": "forward"}]
         await snowball_module.expand_snowball(state)
         assert seen == [7]
+
+
+class TestExpandedSeedsAreNotRepeated:
+    """Seed choice is a pure function of a corpus that barely changes between
+    rounds. On a live run, round 2 re-picked round 1's four seeds and spent
+    the round re-fetching 48 edges that were all already in the corpus."""
+
+    def test_auto_seeds_skip_an_expanded_pair(self):
+        documents = {
+            "doc_0001": doc("doc_0001", 2024, {"RQ1": 0.95}),
+            "doc_0002": doc("doc_0002", 2024, {"RQ1": 0.9}),
+        }
+        active = [Subquestion(id="RQ1", question="q")]
+        first = _auto_seeds(documents, active, set(), 1)
+        assert first[0]["doc_id"] == "doc_0001"
+        assert first[0]["direction"] == "backward"
+
+        later = _auto_seeds(
+            documents, active, set(), 1, expanded=frozenset({"doc_0001:backward"})
+        )
+        assert later[0]["doc_id"] == "doc_0002"
+
+    def test_other_direction_of_an_expanded_seed_is_still_available(self):
+        documents = {"doc_0001": doc("doc_0001", 2018, {"RQ1": 0.9}, citation_count=500)}
+        active = [Subquestion(id="RQ1", question="q")]
+        seeds = _auto_seeds(
+            documents, active, set(), 1, expanded=frozenset({"doc_0001:backward"})
+        )
+        assert (seeds[0]["doc_id"], seeds[0]["direction"]) == ("doc_0001", "forward")
+
+    def test_critic_request_for_an_expanded_pair_is_dropped(self):
+        get_settings(refresh=True)
+        state = state_with(
+            {
+                "doc_0001": doc("doc_0001", 2024, {"RQ1": 0.95}),
+                "doc_0002": doc("doc_0002", 2024, {"RQ1": 0.9}),
+            },
+            snowball_seeds=[{"doc_id": "doc_0001", "direction": "backward"}],
+            snowball_expanded=["doc_0001:backward"],
+        )
+        seeds = plan_snowball(state)["snowball_seeds"]
+        assert [s["doc_id"] for s in seeds] == ["doc_0002"]
+
+    async def test_second_round_moves_on_to_new_seeds(self, monkeypatch):
+        get_settings(refresh=True)
+        from litresearch.nodes import snowball as snowball_module
+
+        class NoEdges:
+            name = "fake"
+
+            async def references(self, doc, limit):
+                return []
+
+            async def citations(self, doc, limit):
+                return []
+
+        monkeypatch.setattr(snowball_module, "snowball_sources", lambda d: [NoEdges()])
+        state = state_with(
+            {
+                "doc_0001": doc("doc_0001", 2024, {"RQ1": 0.95}),
+                "doc_0002": doc("doc_0002", 2024, {"RQ1": 0.9}),
+            }
+        )
+        state["snowball_seeds"] = plan_snowball(state)["snowball_seeds"]
+        assert [s["doc_id"] for s in state["snowball_seeds"]] == ["doc_0001"]
+
+        result = await expand_snowball(state)
+        # A seed with no citation data counts as expanded: retrying it would
+        # only spend another round.
+        assert result["snowball_expanded"] == ["doc_0001:backward"]
+
+        state["snowball_expanded"] = result["snowball_expanded"]
+        state["snowball_history"] = result["snowball_history"]
+        state["snowball_seeds"] = []
+        seeds = plan_snowball(state)["snowball_seeds"]
+        assert [s["doc_id"] for s in seeds] == ["doc_0002"]

@@ -34,6 +34,7 @@ from ..state import (
     Evidence,
     ResearchState,
     SearchIntent,
+    SnowballRound,
     Subquestion,
 )
 from .evidence import cluster_claims, group_by_subquestion
@@ -341,6 +342,10 @@ _MODEL_LIST_FIELDS = {
     "evidence": Evidence,
     "contradictions": Contradiction,
     "critique_history": Critique,
+    # Run-long, not scratch: the snowball round cap and the saturation
+    # criterion are computed from it, so dropping it on save handed a
+    # resumed run a fresh snowball budget.
+    "snowball_history": SnowballRound,
 }
 
 
@@ -355,7 +360,7 @@ def _state_to_jsonable(state: ResearchState) -> dict[str, Any]:
             payload[key] = (value or BudgetUsage()).model_dump(mode="json")
         elif key == "critique":
             payload[key] = value.model_dump(mode="json") if value else None
-        elif key in ("pending_hits", "query_plans", "snowball_history"):
+        elif key in ("pending_hits", "query_plans"):
             # Per-iteration scratch; not worth persisting.
             continue
         else:
@@ -381,6 +386,7 @@ def _state_from_jsonable(payload: dict[str, Any]) -> ResearchState:
     state.setdefault("pending_hits", [])
     state.setdefault("query_plans", [])
     state.setdefault("snowball_history", [])
+    state.setdefault("snowball_expanded", [])
     return state  # type: ignore[return-value]
 
 

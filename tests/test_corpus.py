@@ -11,6 +11,7 @@ from litresearch.state import (
     Evidence,
     Provenance,
     SearchIntent,
+    SnowballRound,
     Subquestion,
     new_state,
 )
@@ -156,8 +157,36 @@ class TestRoundTrip:
         corpus = ResearchCorpus(tmp_path, "Q")
         corpus.save_state(sample_state())
         payload = json.loads(corpus.state_path.read_text())
-        for key in ("pending_hits", "query_plans", "snowball_history"):
+        for key in ("pending_hits", "query_plans"):
             assert key not in payload
+
+    def test_snowball_record_survives_resume(self, tmp_path):
+        """The round cap and saturation criterion are computed from these, so
+        losing them on save gave a resumed run a fresh snowball budget."""
+        state = sample_state()
+        state["snowball_history"] = [
+            SnowballRound(round_index=1, direction="backward",
+                          candidates_examined=48, newly_relevant=48)
+        ]
+        state["snowball_expanded"] = ["doc_0001:backward"]
+        corpus = ResearchCorpus(tmp_path, "Q")
+        corpus.save_state(state)
+        loaded = corpus.load_state()
+        assert loaded["snowball_history"][0].yield_rate == 1.0
+        assert loaded["snowball_expanded"] == ["doc_0001:backward"]
+
+    def test_state_saved_before_expansion_tracking_still_loads(self, tmp_path):
+        import json
+
+        corpus = ResearchCorpus(tmp_path, "Q")
+        corpus.save_state(sample_state())
+        payload = json.loads(corpus.state_path.read_text())
+        payload.pop("snowball_expanded", None)
+        payload.pop("snowball_history", None)
+        corpus.state_path.write_text(json.dumps(payload))
+        loaded = corpus.load_state()
+        assert loaded["snowball_expanded"] == []
+        assert loaded["snowball_history"] == []
 
     def test_missing_state_returns_none(self, tmp_path):
         assert ResearchCorpus(tmp_path, "Q").load_state() is None

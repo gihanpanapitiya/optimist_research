@@ -66,11 +66,15 @@ def plan_snowball(state: ResearchState) -> dict:
     if usage.documents_read >= settings.budget.max_documents_read:
         return {"snowball_seeds": [], "log": [log_line("read budget spent; skipping snowball")]}
 
-    # Requests the critic made explicitly.
+    expanded = frozenset(state.get("snowball_expanded") or [])
+
+    # Requests the critic made explicitly. A request for an expansion that
+    # has already run would only re-fetch edges the corpus already holds.
     requested = [
         dict(item)
         for item in (state.get("snowball_seeds") or [])
         if item.get("doc_id") in documents
+        and expansion_key(item["doc_id"], item.get("direction", "backward")) not in expanded
     ]
 
     max_seeds = max(1, settings.budget.max_snowball_seeds)
@@ -82,6 +86,7 @@ def plan_snowball(state: ResearchState) -> dict:
                 active_subquestions(state),
                 already={item["doc_id"] for item in seeds},
                 limit=max_seeds - len(seeds),
+                expanded=expanded,
             )
         )
 
@@ -112,12 +117,14 @@ async def expand_snowball(state: ResearchState) -> dict:
 
     edge_limit = max(1, get_settings().budget.max_snowball_edges_per_seed)
     tasks = []
+    expanded: list[str] = []
     for seed in seeds:
         doc = documents.get(seed.get("doc_id", ""))
         if doc is None:
             continue
         direction = seed.get("direction", "backward")
         tasks.append(_expand_one(doc, direction, edge_limit))
+        expanded.append(expansion_key(doc.doc_id, direction))
 
     if not tasks:
         return {"log": [log_line("snowball: no resolvable seeds")]}
@@ -131,8 +138,11 @@ async def expand_snowball(state: ResearchState) -> dict:
         per_direction[direction] = per_direction.get(direction, 0) + len(hits)
 
     if not all_hits:
+        # Still recorded as expanded: a seed with no citation data will not
+        # grow any in a later round, so retrying it only spends a round.
         return {
             "snowball_seeds": [],
+            "snowball_expanded": expanded,
             "snowball_history": [
                 SnowballRound(
                     round_index=round_index,
@@ -172,6 +182,7 @@ async def expand_snowball(state: ResearchState) -> dict:
         "documents": updates,
         "identity_index": result.identity_index,
         "snowball_seeds": [],
+        "snowball_expanded": expanded,
         "snowball_history": rounds,
         "budget": BudgetUsage(
             snowball_rounds=1,
@@ -219,6 +230,7 @@ def _auto_seeds(
     active: list[Subquestion],
     already: set[str],
     limit: int,
+    expanded: frozenset[str] = frozenset(),
 ) -> list[dict]:
     """Pick seeds and directions from the state of the corpus.
 
@@ -226,6 +238,9 @@ def _auto_seeds(
     a subquestion whose evidence is all recent is missing its foundations, so
     expand backward; one whose evidence is all old is missing the current
     state of the art, so expand forward.
+
+    A (document, direction) pair in ``expanded`` has already been traversed
+    this run and is skipped, so a later round moves on to the next-best seed.
     """
     if not active:
         return []
@@ -264,6 +279,7 @@ def _auto_seeds(
             for doc in documents.values()
             if doc.relevance.get(sq.id, 0.0) >= 0.7
             and doc.doc_id not in already
+            and expansion_key(doc.doc_id, direction) not in expanded
             and doc.snowball_depth == 0
             and (doc.s2_paper_id or doc.doi or doc.arxiv_id or doc.openalex_id)
         ]
@@ -297,6 +313,11 @@ def _auto_seeds(
         )
 
     return seeds
+
+
+def expansion_key(doc_id: str, direction: str) -> str:
+    """Identity of one traversal, as recorded in ``snowball_expanded``."""
+    return f"{doc_id}:{direction}"
 
 
 def _is_saturated(history: list[SnowballRound], min_yield: float) -> bool:

@@ -10,13 +10,14 @@ from __future__ import annotations
 from litresearch.config import get_settings
 from litresearch.nodes.screen import (
     _citation_score,
+    _intent_yields,
     _novelty,
     _rank,
     _recency_score,
     _select,
     _source_quality,
 )
-from litresearch.state import BudgetUsage, Document, Subquestion
+from litresearch.state import BudgetUsage, Document, Provenance, SearchIntent, Subquestion
 from litresearch.store.canonicalize import significant_tokens
 
 
@@ -190,3 +191,65 @@ class TestSelection:
         corpus = {"doc_0001": doc("doc_0001", relevance={"RQ1": 0.9}, status="failed")}
         queue, _ = _select(corpus, [sq("RQ1")], settings, BudgetUsage())
         assert queue == []
+
+
+def prov(intent_id: str = "RQ1-i1", source: str = "openalex", via: str = "search") -> Provenance:
+    return Provenance(
+        subquestion_id="RQ1", intent_id=intent_id, source=source, query="q", via=via
+    )
+
+
+class TestIntentYields:
+    """The critic judges saturation from these counts, so they must not grow
+    just because the corpus was looked at again."""
+
+    def intents(self, **counts) -> dict[str, SearchIntent]:
+        return {
+            "RQ1-i1": SearchIntent(id="RQ1-i1", subquestion_id="RQ1", intent="i", **counts)
+        }
+
+    def test_counts_distinct_documents(self):
+        documents = {
+            "doc_0001": doc("doc_0001", relevance={"RQ1": 0.9}, discovered_by=[prov()]),
+            "doc_0002": doc("doc_0002", relevance={"RQ1": 0.1}, discovered_by=[prov()]),
+        }
+        updated = _intent_yields(documents, self.intents(), 0.45)["RQ1-i1"]
+        assert (updated.documents_found, updated.relevant_found) == (2, 1)
+
+    def test_rescreening_does_not_credit_again(self):
+        """Live regression: adding RQ6 re-screened the corpus and every
+        first-iteration intent reported exactly twice its true yield."""
+        documents = {
+            "doc_0001": doc(
+                "doc_0001", relevance={"RQ1": 0.9, "RQ6": 0.2}, discovered_by=[prov()]
+            ),
+        }
+        intents = self.intents()
+        for _ in range(2):  # the original screening pass, then the RQ6 re-screen
+            intents = {**intents, **_intent_yields(documents, intents, 0.45)}
+        assert (intents["RQ1-i1"].documents_found, intents["RQ1-i1"].relevant_found) == (1, 1)
+
+    def test_one_document_from_two_sources_counts_once(self):
+        documents = {
+            "doc_0001": doc(
+                "doc_0001",
+                relevance={"RQ1": 0.9},
+                discovered_by=[prov(source="openalex"), prov(source="crossref")],
+            ),
+        }
+        updated = _intent_yields(documents, self.intents(), 0.45)["RQ1-i1"]
+        assert (updated.documents_found, updated.relevant_found) == (1, 1)
+
+    def test_snowball_hits_do_not_count_toward_search_yield(self):
+        """Snowball hits inherit their seed's intent id, but say nothing about
+        whether that intent's queries work."""
+        documents = {
+            "doc_0001": doc("doc_0001", relevance={"RQ1": 0.9}, discovered_by=[prov()]),
+            "doc_0002": doc(
+                "doc_0002",
+                relevance={"RQ1": 0.9},
+                discovered_by=[prov(via="backward_snowball")],
+            ),
+        }
+        updated = _intent_yields(documents, self.intents(), 0.45)["RQ1-i1"]
+        assert (updated.documents_found, updated.relevant_found) == (1, 1)

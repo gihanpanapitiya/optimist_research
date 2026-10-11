@@ -58,22 +58,22 @@ async def search_all(state: ResearchState) -> dict:
 
     all_hits: list[RawHit] = []
     per_source: dict[str, int] = {}
-    intent_counts: dict[str, int] = {}
+    searched_ids: set[str] = set()
     for plan, hits in results:
         all_hits.extend(hits)
         per_source[plan.source] = per_source.get(plan.source, 0) + len(hits)
-        intent_counts[plan.intent_id] = intent_counts.get(plan.intent_id, 0) + len(hits)
+        searched_ids.add(plan.intent_id)
 
-    # Mark the intents that have now been searched.
+    # Mark the intents that have now been searched. Their yield counts are
+    # set by screening, over canonical documents rather than raw hits.
     intents: dict[str, SearchIntent] = state.get("intents") or {}
     updated_intents: dict[str, SearchIntent] = {}
-    for intent_id, count in intent_counts.items():
+    for intent_id in searched_ids:
         intent = intents.get(intent_id)
         if intent is None:
             continue
         updated = intent.model_copy(deep=True)
         updated.status = "searched"
-        updated.documents_found += count
         updated_intents[intent_id] = updated
 
     breakdown = ", ".join(f"{s}:{n}" for s, n in sorted(per_source.items())) or "nothing"

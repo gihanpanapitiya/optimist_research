@@ -751,6 +751,13 @@ class ResearchState(TypedDict, total=False):
     # Accumulates for the whole run: it is the record the saturation
     # criterion is computed from.
     snowball_history: Annotated[list[SnowballRound], extend_or_clear]
+    snowball_expanded: Annotated[list[str], extend_or_clear]
+    """``"<doc_id>:<direction>"`` for every seed already expanded this run.
+
+    Without it, seed selection -- which is a pure function of a corpus that
+    barely changes between rounds -- picks the same seeds again and spends a
+    round re-fetching edges that are already in the corpus.
+    """
 
     # --- evidence and synthesis ---
     evidence: Annotated[list[Evidence], extend_unique_evidence]
@@ -808,6 +815,7 @@ def new_state(main_question: str, scope_notes: str = "") -> ResearchState:
         identity_index={},
         reading_queue=[],
         snowball_history=[],
+        snowball_expanded=[],
         snowball_seeds=[],
         evidence=[],
         readings={},

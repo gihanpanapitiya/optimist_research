@@ -30,7 +30,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from ..config import get_settings
 from ..llm import ainvoke_structured
 from ..schemas import ScreeningOutput
-from ..state import BudgetUsage, Document, ResearchState, Subquestion
+from ..state import BudgetUsage, Document, ResearchState, SearchIntent, Subquestion
 from ..store.canonicalize import significant_tokens
 from .common import (
     active_subquestions,
@@ -170,34 +170,50 @@ async def screen_and_rank(state: ResearchState) -> dict:
     return {
         "documents": updates,
         "reading_queue": queue,
-        "intents": _intent_yields(screened, state, settings.ranking.min_relevance_to_read),
+        "intents": _intent_yields(
+            merged_corpus, state.get("intents") or {}, settings.ranking.min_relevance_to_read
+        ),
         "budget": BudgetUsage(llm_calls=llm_calls),
         "log": [log_line(note)],
     }
 
 
 def _intent_yields(
-    screened: dict[str, Document], state: ResearchState, threshold: float
-) -> dict:
-    """Credit each intent with the relevant documents its queries produced.
+    documents: dict[str, Document], intents: dict[str, SearchIntent], threshold: float
+) -> dict[str, SearchIntent]:
+    """Each intent's yield: distinct documents its searches found, and how
+    many of those screened as relevant to its subquestion.
 
     This is the per-intent yield the critic reads when judging saturation: an
     intent returning hits that all screen as irrelevant is a signal that the
     query, or the intent itself, is not working.
+
+    Recomputed from the whole corpus rather than incremented. Documents are
+    re-screened whenever a subquestion is added, and an increment credited
+    their intents again on every such pass; a document reached through two
+    sources was likewise counted once per provenance record. Only search
+    provenance counts -- snowball hits inherit their seed's intent, but say
+    nothing about whether that intent's queries are working.
     """
-    intents = state.get("intents") or {}
-    counts: dict[str, int] = {}
-    for doc in screened.values():
+    found: dict[str, set[str]] = defaultdict(set)
+    relevant: dict[str, set[str]] = defaultdict(set)
+    for doc in documents.values():
         for prov in doc.discovered_by:
-            if prov.intent_id not in intents:
+            if prov.via != "search" or prov.intent_id not in intents:
                 continue
+            found[prov.intent_id].add(doc.doc_id)
             if doc.relevance.get(prov.subquestion_id, 0.0) >= threshold:
-                counts[prov.intent_id] = counts.get(prov.intent_id, 0) + 1
+                relevant[prov.intent_id].add(doc.doc_id)
 
     updates = {}
-    for intent_id, count in counts.items():
-        updated = intents[intent_id].model_copy(deep=True)
-        updated.relevant_found += count
+    for intent_id, doc_ids in found.items():
+        intent = intents[intent_id]
+        n_found, n_relevant = len(doc_ids), len(relevant[intent_id])
+        if (intent.documents_found, intent.relevant_found) == (n_found, n_relevant):
+            continue
+        updated = intent.model_copy(deep=True)
+        updated.documents_found = n_found
+        updated.relevant_found = n_relevant
         updates[intent_id] = updated
     return updates
 
