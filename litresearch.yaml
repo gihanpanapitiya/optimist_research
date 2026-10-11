@@ -1,0 +1,145 @@
+# litresearch configuration.
+#
+# Commit this file. Keep API keys out of it -- those belong in .env, which is
+# gitignored. Precedence, lowest first:
+#
+#   defaults in litresearch/config.py  <  this file  <  .env  <  environment
+#   variables  <  CLI flags
+#
+# So a committed setting here can always be overridden for one run:
+#   litresearch run "..." --max-documents 20
+#   LITRESEARCH_BUDGET__MAX_DOCUMENTS_READ=20 litresearch run "..."
+#
+# Files nearer the working directory win over ones further up, merged key by
+# key -- so a litresearch.yaml in a subdirectory can change one budget value
+# without restating the rest. `litresearch config` prints what is in effect
+# and which files it came from.
+
+# ---------------------------------------------------------------------------
+# Which model backs each agent role.
+#
+# Specs are "provider:model", resolved by langchain's init_chat_model, so
+# providers can be mixed freely. The roles are split because their cost
+# profiles differ by orders of magnitude: screener and reader run once per
+# DOCUMENT, while planner and critic run once per ITERATION. Put the cheap
+# model on the per-document roles and the capable one on the judgement roles.
+#
+# Running on Ollama: point every role at the SAME model. Mixing local models
+# makes Ollama unload and reload between calls, which dominates the runtime.
+# ---------------------------------------------------------------------------
+models:
+  # Judgement roles: run once per iteration, so a capable model is cheap here.
+  planner: openai:gpt-4o-mini
+  critic: openai:gpt-4o-mini
+  synthesizer: openai:gpt-4o-mini
+  writer: openai:gpt-4o-mini
+
+  # Per-document roles: these dominate spend, so they step down a tier.
+  intent: openai:gpt-4o-mini
+  query: openai:gpt-4o-mini
+  reader: openai:gpt-4o-mini
+
+  # Highest volume of all -- one call per screening batch, every iteration.
+  screener: openai:gpt-4o-mini
+
+  # Fully local alternative. Point every role at ONE model: mixing local
+  # models makes Ollama unload and reload between calls, which dominates the
+  # runtime. Verified working with scripts/check_models.py.
+  #   planner: ollama:gemma4:latest
+  #   intent: ollama:gemma4:latest
+  #   query: ollama:gemma4:latest
+  #   screener: ollama:gemma4:latest
+  #   reader: ollama:gemma4:latest
+  #   synthesizer: ollama:gemma4:latest
+  #   critic: ollama:gemma4:latest
+  #   writer: ollama:gemma4:latest
+
+  # Near-deterministic where output is parsed into a schema; a little
+  # variation where it widens the query space.
+  temperature_structured: 0.0
+  temperature_creative: 0.4
+
+# ---------------------------------------------------------------------------
+# Literature sources. arXiv, OpenAlex, Crossref and PubMed need no key.
+# ---------------------------------------------------------------------------
+enabled_sources:
+  - arxiv
+  - openalex
+  - crossref
+
+# auto = use Semantic Scholar only when SEMANTIC_SCHOLAR_API_KEY is set. The
+# unauthenticated pool 429s under even light use, so an unkeyed run would
+# spend search budget to return nothing. on = force it; off = never use it.
+semantic_scholar: auto
+
+# Joins the OpenAlex/Crossref/NCBI polite pools, which have far better rate
+# limits. Sent to those APIs as a query parameter, so it is blank by default.
+contact_email: ""
+
+# ---------------------------------------------------------------------------
+# Research budget. These are LIMITS, NOT TARGETS -- the critic may stop well
+# before any is reached, and "documents retrieved" is never a stopping
+# criterion. Values below are tuned for slow local inference; see the
+# commented local-inference values.
+# ---------------------------------------------------------------------------
+budget:
+  max_documents_read: 40           # local: 8
+  max_search_operations: 60        # local: 12
+  max_snowball_rounds: 2           # local: 1
+  max_research_iterations: 3       # local: 2
+
+  max_subquestions: 5              # local: 3
+  max_intents_per_subquestion: 2   # local: 1
+  max_results_per_query: 15        # local: 8
+  max_documents_per_iteration: 16  # local: 6
+  max_documents_per_subquestion: 6 # local: 3
+
+  # Documents per screening call. The call emits a score per document per
+  # subquestion, so a large batch is slow and is where a small model starts
+  # losing track of which index it is scoring.
+  screen_batch_size: 10            # local: 5
+
+  # Snowball breadth must track the reading budget: every candidate a round
+  # produces has to be screened before it can be discarded. The hosted
+  # defaults yielded 120 new documents from one round against an 8-document
+  # budget, which stalled a local run.
+  max_snowball_seeds: 4            # local: 2
+  max_snowball_edges_per_seed: 25  # local: 15
+
+  # Stop snowballing when a round's yield of new documents falls below this.
+  snowball_min_yield: 0.10
+  target_overall_coverage: 0.80
+
+# ---------------------------------------------------------------------------
+# Document ranking. Relevance dominates deliberately; the rest are
+# tie-breakers encoding the retrieval objectives from the methodology.
+# ---------------------------------------------------------------------------
+ranking:
+  relevance: 1.0
+  citation_impact: 0.15
+  recency: 0.20
+  source_quality: 0.10
+  multi_source_corroboration: 0.10
+  primary_research: 0.10
+  novelty: 0.15
+  min_relevance_to_read: 0.45      # below this, a document is never read
+
+# ---------------------------------------------------------------------------
+# Execution
+# ---------------------------------------------------------------------------
+# Evidence from title/abstract/metadata only. true fetches and parses PDFs
+# (needs the [pdf] extra) so evidence can cite real sections.
+read_full_text: false
+
+output_dir: research
+
+# Bounds the parallel reader and screener fan-out. 6 is fine for a hosted
+# API; drop to 2 for a local model, which serializes requests anyway.
+max_concurrent_readers: 6
+max_concurrent_requests: 8
+http_timeout_seconds: 300.0
+
+# Ollama only. Ollama defaults to a 4096-token window whatever the model
+# supports, and truncates silently -- far too small, since one screening
+# prompt carries several abstracts.
+ollama_num_ctx: 32768
