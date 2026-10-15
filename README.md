@@ -1,4 +1,4 @@
-# litresearch
+# FOREST Deep Research (`forestresearch`)
 
 An iterative deep-research agent for autonomous literature research, built on
 LangGraph. It implements the methodology in [`plan.md`](plan.md): rather than
@@ -7,7 +7,7 @@ as an **iterative evidence-acquisition process** over an explicit, mutable
 research state.
 
 ```
-litresearch run "What are the recent developments in planning for AI agents?"
+forestresearch run "What are the recent developments in planning for AI agents?"
 ```
 
 ## What it does
@@ -43,14 +43,14 @@ cp .env.example .env                   # then edit
 ```
 
 Set at minimum an API key for your model provider, and
-`LITRESEARCH_CONTACT_EMAIL` — it puts OpenAlex, Crossref and PubMed requests in
+`FORESTRESEARCH_CONTACT_EMAIL` — it puts OpenAlex, Crossref and PubMed requests in
 their polite pools, which have far better rate limits. Everything else is
 optional: with no literature-source keys at all, arXiv, OpenAlex, Crossref and
 PubMed all work, and OpenAlex supplies the citation graph.
 
 ```bash
-litresearch sources    # which sources are configured and usable
-litresearch config     # effective configuration
+forestresearch sources    # which sources are configured and usable
+forestresearch config     # effective configuration
 ```
 
 ## Sources
@@ -78,9 +78,9 @@ query-generation calls and search budget to return nothing. Leaving it off is
 strictly better than leaving it on without a key.
 
 ```bash
-litresearch sources                              # shows the resolved decision
-litresearch run "..." --semantic-scholar on       # try the unkeyed pool anyway
-litresearch run "..." --semantic-scholar off      # skip it even with a key
+forestresearch sources                              # shows the resolved decision
+forestresearch run "..." --semantic-scholar on       # try the unkeyed pool anyway
+forestresearch run "..." --semantic-scholar off      # skip it even with a key
 ```
 
 **Without a key, OpenAlex carries the citation graph.** It covers both
@@ -200,7 +200,7 @@ once.
 
 | Path | Role |
 | --- | --- |
-| `litresearch.yaml` | The settings you edit; `.env` holds only secrets |
+| `forestresearch.yaml` | The settings you edit; `.env` holds only secrets |
 | `state.py` | The research state and its LangGraph reducers — the spine |
 | `schemas.py` | Structured-output schemas for the LLM nodes |
 | `config.py` | Budgets, ranking weights, per-role model routing |
@@ -244,7 +244,7 @@ a usable partial corpus.
 
 ## Configuration
 
-Settings live in **`litresearch.yaml`**, which is the file to commit. Secrets
+Settings live in **`forestresearch.yaml`**, which is the file to commit. Secrets
 stay in `.env`, which is gitignored.
 
 ```yaml
@@ -276,24 +276,24 @@ mixed across roles.
 
 Lowest first, so a committed file can always be overridden for one run:
 
-1. defaults in `litresearch/config.py`
-2. `litresearch.yaml`
+1. defaults in `forestresearch/config.py`
+2. `forestresearch.yaml`
 3. `.env` — API keys, and machine-local overrides
 4. environment variables, including those the CLI sets from its flags
 
 ```bash
-litresearch config                            # what is in effect, and from which files
-litresearch run "..." --max-documents 20      # beats the committed YAML
-LITRESEARCH_BUDGET__MAX_DOCUMENTS_READ=20 ... # the same, as an env var
+forestresearch config                            # what is in effect, and from which files
+forestresearch run "..." --max-documents 20      # beats the committed YAML
+FORESTRESEARCH_BUDGET__MAX_DOCUMENTS_READ=20 ... # the same, as an env var
 ```
 
 Both files are found by walking up from the working directory and then falling
 back to the project root, nearest winning — so a notebook started anywhere
 still finds the configuration. YAML files merge **key by key**, so a
-`litresearch.yaml` in a subdirectory can change one budget value without
-restating the block. `LITRESEARCH_CONFIG_FILE` pins an explicit file.
+`forestresearch.yaml` in a subdirectory can change one budget value without
+restating the block. `FORESTRESEARCH_CONFIG_FILE` pins an explicit file.
 
-Environment variables still work for everything (`LITRESEARCH_` prefix, `__`
+Environment variables still work for everything (`FORESTRESEARCH_` prefix, `__`
 for nesting) and are the right tool for a single override. They are a poor
 tool for a whole configuration: a key repeated in a `.env` silently takes its
 last value, which is how an edit meant to raise a concurrency limit left it at
@@ -310,7 +310,7 @@ pip install -e '.[ollama]'
 ```
 
 ```yaml
-# litresearch.yaml -- point every role at the SAME model
+# forestresearch.yaml -- point every role at the SAME model
 models:
   planner: ollama:gemma4:latest
   intent: ollama:gemma4:latest
@@ -390,10 +390,10 @@ Budget ceilings are limits, not targets — the critic may stop well before any
 is reached:
 
 ```bash
-LITRESEARCH_BUDGET__MAX_DOCUMENTS_READ=100
-LITRESEARCH_BUDGET__MAX_SEARCH_OPERATIONS=60
-LITRESEARCH_BUDGET__MAX_SNOWBALL_ROUNDS=3
-LITRESEARCH_BUDGET__MAX_RESEARCH_ITERATIONS=4
+FORESTRESEARCH_BUDGET__MAX_DOCUMENTS_READ=100
+FORESTRESEARCH_BUDGET__MAX_SEARCH_OPERATIONS=60
+FORESTRESEARCH_BUDGET__MAX_SNOWBALL_ROUNDS=3
+FORESTRESEARCH_BUDGET__MAX_RESEARCH_ITERATIONS=4
 ```
 
 Number of papers retrieved is deliberately *not* a stopping criterion.
@@ -408,13 +408,13 @@ text, so `location` fields point at real sections.
 
 ```bash
 pip install -e '.[pdf]'
-litresearch run "..." --full-text
+forestresearch run "..." --full-text
 ```
 
 ## Programmatic use
 
 ```python
-from litresearch.runner import run_research, summarize_run
+from forestresearch.runner import run_research, summarize_run
 
 state = await run_research(
     "How do LLM agents recover from planning failures?",
@@ -450,7 +450,7 @@ reconciliation left to the synthesizer. A concept-graph layer would slot in at
 ```bash
 pip install -e '.[anthropic,dev,pdf]'
 pytest                              # 250 tests, fully offline
-ruff check litresearch tests scripts
+ruff check forestresearch tests scripts
 python scripts/smoke_sources.py     # live source check, makes real requests
 python scripts/check_models.py openai:gpt-5.4-mini   # can a model cope?
 ```

@@ -10,16 +10,16 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from litresearch.config import get_settings
-from litresearch.graph import build_graph
-from litresearch.runner import run_research, summarize_run
-from litresearch.schemas import (
+from forestresearch.config import get_settings
+from forestresearch.graph import build_graph
+from forestresearch.runner import run_research, summarize_run
+from forestresearch.schemas import (
     CoverageScore,
     CritiqueOutput,
     ProposedPlanEdit,
     RecommendedIntent,
 )
-from litresearch.state import new_state
+from forestresearch.state import new_state
 
 QUESTION = "How do AI agents plan and recover from failures?"
 
@@ -216,7 +216,7 @@ class TestAdaptiveLoop:
         assert "no actionable next steps" in final["terminated_because"]
 
     async def test_iteration_limit_stops_a_persistent_critic(self, wired, monkeypatch):
-        monkeypatch.setenv("LITRESEARCH_BUDGET__MAX_RESEARCH_ITERATIONS", "2")
+        monkeypatch.setenv("FORESTRESEARCH_BUDGET__MAX_RESEARCH_ITERATIONS", "2")
         get_settings(refresh=True)
         wired.critique_queue = [
             CritiqueOutput(
@@ -307,7 +307,7 @@ class TestPersistence:
         assert list((root / "sources").glob("doc_*/notes.md"))
 
     async def test_state_round_trips(self, wired, tmp_path):
-        from litresearch.store.corpus import ResearchCorpus
+        from forestresearch.store.corpus import ResearchCorpus
 
         state = await run_research(QUESTION)
         corpus = ResearchCorpus(get_settings().output_dir, QUESTION)
@@ -323,7 +323,7 @@ class TestPersistence:
         assert reloaded["subquestions"]["RQ1"].question
 
     async def test_saved_state_is_valid_json(self, wired):
-        from litresearch.store.corpus import ResearchCorpus
+        from forestresearch.store.corpus import ResearchCorpus
 
         await run_research(QUESTION)
         corpus = ResearchCorpus(get_settings().output_dir, QUESTION)

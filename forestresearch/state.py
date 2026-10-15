@@ -42,7 +42,7 @@ SubquestionStatus = Literal[
 
 IntentStatus = Literal["pending", "searched", "exhausted"]
 
-DocumentStatus = Literal["candidate", "selected", "read", "skipped", "failed"]
+DocumentStatus = Literal["candidate", "selected", "read", "failed"]
 
 UNKNOWN_SNOWBALL_DEPTH = 99
 """Placeholder depth for a hit that arrived through the citation graph.
@@ -379,7 +379,7 @@ class Document(BaseModel):
         # completed read never regresses. "failed" outranks "selected" so that
         # a document whose reading failed actually records the failure --
         # otherwise it stays "selected" and is re-queued every iteration.
-        precedence = ["candidate", "selected", "skipped", "failed", "read"]
+        precedence = ["candidate", "selected", "failed", "read"]
         merged.status = max(
             [merged.status, other.status], key=lambda s: precedence.index(s)
         )

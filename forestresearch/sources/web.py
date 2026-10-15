@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+from datetime import date
 
 from ..state import QueryPlan, RawHit
 from .base import SearchSource
@@ -25,6 +26,15 @@ TAVILY_URL = "https://api.tavily.com/search"
 ARXIV_RE = re.compile(r"arxiv\.org/(?:abs|pdf)/(\d{4}\.\d{4,5})")
 DOI_RE = re.compile(r"\b(10\.\d{4,9}/[-._;()/:a-z0-9]+)\b", re.IGNORECASE)
 PUBMED_RE = re.compile(r"pubmed\.ncbi\.nlm\.nih\.gov/(\d+)")
+
+# A year in a date string, not embedded in a longer number.
+DATE_YEAR_RE = re.compile(r"(?<!\d)((?:19|20)\d{2})(?!\d)")
+# A year in a URL only where it is a date: a whole path segment ("/2024/",
+# "/2024/05/12/") or one followed by a month ("/2024-05-12"). URLs are full
+# of year-like digit runs that are nothing of the kind -- the 2076 in MDPI's
+# ISSN path "/2076-3417/", PMC12089777, a ScienceDirect PII, a LinkedIn
+# activity id -- and each one became a publication year.
+URL_YEAR_RE = re.compile(r"/((?:19|20)\d{2})(?=/|$|-(?:0[1-9]|1[0-2])(?!\d))")
 
 
 class WebSource(SearchSource):
@@ -101,20 +111,12 @@ class WebSource(SearchSource):
         if match := PUBMED_RE.search(url):
             pubmed_id = match.group(1)
 
-        year = None
-        published = result.get("published_date") or ""
-        if match := re.search(r"(19|20)\d{2}", published or url):
-            candidate = int(match.group(0))
-            # Guard against matching an unrelated number in a URL path.
-            if 1990 <= candidate <= 2100:
-                year = candidate
-
         return RawHit(
             source=self.name,
             source_id=url,
             title=title,
             abstract=content,
-            year=year,
+            year=self._year(result.get("published_date") or "", url),
             venue=self._host(url),
             doi=doi,
             arxiv_id=arxiv_id,
@@ -125,6 +127,21 @@ class WebSource(SearchSource):
             is_preprint=False,
             provenance=self.provenance_for(plan, rank),
         )
+
+    @staticmethod
+    def _year(published: str, url: str) -> int | None:
+        """Publication year from Tavily's date, else a date-shaped URL path.
+
+        No year is far better than a wrong one: recency ranking and the
+        report's source-age caveats both trust this field.
+        """
+        match = DATE_YEAR_RE.search(published)
+        if match is None:
+            match = URL_YEAR_RE.search(url.split("?", 1)[0].split("#", 1)[0])
+        if match is None:
+            return None
+        year = int(match.group(1))
+        return year if 1990 <= year <= date.today().year + 1 else None
 
     @staticmethod
     def _host(url: str) -> str:

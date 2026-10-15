@@ -1,6 +1,6 @@
 """Tests for the configuration layers.
 
-Precedence, lowest first: defaults < litresearch.yaml < .env < environment.
+Precedence, lowest first: defaults < forestresearch.yaml < .env < environment.
 YAML sits below the environment deliberately, so a committed file can always
 be overridden for a single run by a CLI flag (which sets an env var).
 """
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from litresearch.config import CONFIG_FILENAMES, PROJECT_ROOT, Settings, _discover
+from forestresearch.config import CONFIG_FILENAMES, PROJECT_ROOT, Settings, _discover
 
 
 @pytest.fixture
@@ -22,7 +22,7 @@ def yaml_settings(monkeypatch):
             Settings.model_config, "yaml_file", tuple(str(p) for p in paths)
         )
         for key in list(__import__("os").environ):
-            if key.startswith("LITRESEARCH_"):
+            if key.startswith("FORESTRESEARCH_"):
                 monkeypatch.delenv(key, raising=False)
         for key, value in env.items():
             monkeypatch.setenv(key, value)
@@ -39,7 +39,7 @@ def write(path, text):
 class TestYamlLayer:
     def test_nested_blocks_load(self, tmp_path, yaml_settings):
         config = write(
-            tmp_path / "litresearch.yaml",
+            tmp_path / "forestresearch.yaml",
             "models:\n"
             "  planner: openai:gpt-5.4\n"
             "  screener: openai:gpt-5.4-nano\n"
@@ -56,7 +56,7 @@ class TestYamlLayer:
 
     def test_unset_keys_keep_their_defaults(self, tmp_path, yaml_settings):
         config = write(
-            tmp_path / "litresearch.yaml", "budget:\n  max_documents_read: 42\n"
+            tmp_path / "forestresearch.yaml", "budget:\n  max_documents_read: 42\n"
         )
         settings = yaml_settings(config)
         # Setting one key in a block must not reset the rest of the block.
@@ -66,7 +66,7 @@ class TestYamlLayer:
 
     def test_enabled_sources_accepts_a_yaml_list(self, tmp_path, yaml_settings):
         config = write(
-            tmp_path / "litresearch.yaml",
+            tmp_path / "forestresearch.yaml",
             "enabled_sources:\n  - arxiv\n  - openalex\n  - crossref\n",
         )
         settings = yaml_settings(config)
@@ -75,12 +75,12 @@ class TestYamlLayer:
 
     def test_enabled_sources_still_accepts_a_string(self, tmp_path, yaml_settings):
         config = write(
-            tmp_path / "litresearch.yaml", "enabled_sources: arxiv, openalex\n"
+            tmp_path / "forestresearch.yaml", "enabled_sources: arxiv, openalex\n"
         )
         assert yaml_settings(config).sources == ["arxiv", "openalex"]
 
     def test_an_empty_file_is_harmless(self, tmp_path, yaml_settings):
-        config = write(tmp_path / "litresearch.yaml", "")
+        config = write(tmp_path / "forestresearch.yaml", "")
         assert yaml_settings(config).budget.max_documents_read == 100
 
 
@@ -88,10 +88,10 @@ class TestPrecedence:
     def test_the_environment_beats_the_yaml(self, tmp_path, yaml_settings):
         """A CLI flag sets an env var, so this is what --max-documents does."""
         config = write(
-            tmp_path / "litresearch.yaml", "budget:\n  max_documents_read: 42\n"
+            tmp_path / "forestresearch.yaml", "budget:\n  max_documents_read: 42\n"
         )
         settings = yaml_settings(
-            config, LITRESEARCH_BUDGET__MAX_DOCUMENTS_READ="7"
+            config, FORESTRESEARCH_BUDGET__MAX_DOCUMENTS_READ="7"
         )
         assert settings.budget.max_documents_read == 7
 
@@ -120,33 +120,33 @@ class TestPrecedence:
 class TestDiscovery:
     def test_the_project_config_is_found_from_anywhere(self, monkeypatch, tmp_path):
         monkeypatch.chdir(tmp_path)
-        found = _discover("litresearch.yaml")
-        if (PROJECT_ROOT / "litresearch.yaml").is_file():
-            assert PROJECT_ROOT / "litresearch.yaml" in found
+        found = _discover("forestresearch.yaml")
+        if (PROJECT_ROOT / "forestresearch.yaml").is_file():
+            assert PROJECT_ROOT / "forestresearch.yaml" in found
 
     def test_a_nearer_config_is_ordered_last(self, monkeypatch, tmp_path):
         """Later entries take precedence in pydantic-settings."""
-        local = tmp_path / "litresearch.yaml"
+        local = tmp_path / "forestresearch.yaml"
         local.write_text("budget:\n  max_documents_read: 5\n")
         monkeypatch.chdir(tmp_path)
-        found = _discover("litresearch.yaml")
+        found = _discover("forestresearch.yaml")
         assert found[-1] == local
 
     def test_missing_yaml_files_are_filtered_out(self, monkeypatch, tmp_path):
         """A nonexistent path makes the YAML source raise, so never pass one."""
         monkeypatch.chdir(tmp_path)
-        assert all(p.is_file() for p in _discover("litresearch.yaml"))
+        assert all(p.is_file() for p in _discover("forestresearch.yaml"))
 
     def test_an_explicit_config_file_wins_outright(self, monkeypatch, tmp_path):
-        from litresearch.config import _config_files
+        from forestresearch.config import _config_files
 
         pinned = tmp_path / "pinned.yaml"
         pinned.write_text("budget:\n  max_documents_read: 3\n")
-        monkeypatch.setenv("LITRESEARCH_CONFIG_FILE", str(pinned))
+        monkeypatch.setenv("FORESTRESEARCH_CONFIG_FILE", str(pinned))
         assert _config_files() == (pinned,)
 
     def test_both_yaml_extensions_are_recognized(self):
-        assert CONFIG_FILENAMES == ("litresearch.yaml", "litresearch.yml")
+        assert CONFIG_FILENAMES == ("forestresearch.yaml", "forestresearch.yml")
 
 
 class TestSubquestionIdResolution:
@@ -159,7 +159,7 @@ class TestSubquestionIdResolution:
 
     @staticmethod
     def resolve(raw, valid=("RQ1", "RQ2", "RQ2.1", "RQ10")):
-        from litresearch.nodes.common import resolve_subquestion_id
+        from forestresearch.nodes.common import resolve_subquestion_id
 
         return resolve_subquestion_id(raw, set(valid))
 

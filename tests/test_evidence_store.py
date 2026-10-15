@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import datetime
 
-from litresearch.state import Document, Evidence
-from litresearch.store.evidence import (
+from forestresearch.state import Document, Evidence
+from forestresearch.store.evidence import (
     cluster_claims,
     diversity_report,
     group_by_subquestion,

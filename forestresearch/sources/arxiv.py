@@ -46,10 +46,25 @@ STOPWORDS = frozenset(
 )
 
 
+def _terms(text: str) -> list[str]:
+    """Distinctive words, in order, once each."""
+    terms: list[str] = []
+    seen: set[str] = set()
+    for t in re.split(r"[^A-Za-z0-9\-]+", text):
+        if len(t) > 2 and t.lower() not in STOPWORDS and not t.isdigit():
+            if t.lower() not in seen:
+                seen.add(t.lower())
+                terms.append(t)
+    return terms
+
+
 class ArxivSource(SearchSource):
     name = "arxiv"
     # arXiv's stated guidance is one request per three seconds; serialize.
     min_request_interval = 3.0
+    # arXiv sends 429s with no Retry-After even at the stated pacing, and its
+    # penalty was measured clearing after about half a minute.
+    rate_limit_cooldown = 30.0
     max_concurrency = 1
 
     async def search(self, plan: QueryPlan) -> list[RawHit]:
@@ -62,6 +77,13 @@ class ArxivSource(SearchSource):
         Prompting alone does not prevent this -- the model produced exactly
         such a query on a live run -- so the adapter drops the least
         distinctive clauses and retries.
+
+        Quoted phrases are the worst case. Models write queries such as
+        '"LLM-based systems" AND "query decomposition" AND "literature
+        research"', and three phrases ANDed returned nothing on 13 of 14 such
+        queries from one run, while two phrases still returned nothing on 11.
+        Their words, unquoted, found results for most of them, so that is what
+        a phrase query relaxes to.
         """
         clauses = self._clauses(plan)
         if not clauses:
@@ -70,11 +92,15 @@ class ArxivSource(SearchSource):
         # Full query first, then progressively fewer clauses. Each attempt
         # costs a request at arXiv's 3s pacing, so the ladder is short and
         # only descends when the previous attempt found nothing at all.
-        attempts = [len(clauses)]
-        attempts += [n for n in (4, 3) if n < len(clauses)]
+        relaxed = self._word_clauses(plan) if '"' in plan.query else clauses
+        attempts = [clauses]
+        for width in (4, 3):
+            # One loose word matches far too much to be worth a request.
+            if relaxed[:width] not in attempts and len(relaxed[:width]) >= 2:
+                attempts.append(relaxed[:width])
 
-        for width in attempts:
-            query = self._assemble(clauses[:width], plan)
+        for attempt in attempts:
+            query = self._assemble(attempt, plan)
             text = await self.get_text(
                 API_URL,
                 params={
@@ -91,12 +117,11 @@ class ArxivSource(SearchSource):
                 return []
             hits = self._parse(text, plan)
             if hits:
-                if width < len(clauses):
+                if attempt is not clauses:
                     logger.info(
-                        "arxiv: %r returned nothing; relaxed to %d clause(s) "
-                        "and found %d",
+                        "arxiv: %r returned nothing; relaxed to %s and found %d",
                         plan.query,
-                        width,
+                        " ".join(attempt),
                         len(hits),
                     )
                 return hits
@@ -115,19 +140,25 @@ class ArxivSource(SearchSource):
         length was measurably worse, since it ranks "traditional" above
         "LLMs". Ordering matters because relaxation truncates this list.
         """
-        phrases = re.findall(r'"([^"]+)"', plan.query)
-        remainder = re.sub(r'"[^"]*"', " ", plan.query)
-        terms = [
-            t
-            for t in re.split(r"[^A-Za-z0-9\-]+", remainder)
-            if len(t) > 2 and t.lower() not in STOPWORDS
+        # A phrase with no letters is a date range or similar ("2023..2026");
+        # dates belong in the submittedDate filter, not the text match.
+        phrases = [
+            p for p in re.findall(r'"([^"]+)"', plan.query) if re.search(r"[A-Za-z]", p)
         ]
+        remainder = re.sub(r'"[^"]*"', " ", plan.query)
 
         clauses = [f'all:"{p}"' for p in phrases]
-        clauses += [f"all:{t}" for t in terms]
+        clauses += [f"all:{t}" for t in _terms(remainder)]
         if not clauses and plan.query.strip():
             clauses = [f'all:"{plan.query.strip()}"']
         return clauses
+
+    def _word_clauses(self, plan: QueryPlan) -> list[str]:
+        """Every word of the query, phrases unquoted, in written order."""
+        # Phrases first, then the loose remainder -- the order _clauses uses.
+        phrases = " ".join(re.findall(r'"([^"]+)"', plan.query))
+        remainder = re.sub(r'"[^"]*"', " ", plan.query)
+        return [f"all:{t}" for t in _terms(f"{phrases} {remainder}")]
 
     @staticmethod
     def _assemble(clauses: list[str], plan: QueryPlan) -> str:

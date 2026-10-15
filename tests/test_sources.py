@@ -10,13 +10,13 @@ from __future__ import annotations
 
 import pytest
 
-from litresearch.sources.arxiv import ArxivSource
-from litresearch.sources.crossref import CrossrefSource, strip_jats
-from litresearch.sources.openalex import OpenAlexSource, reconstruct_abstract
-from litresearch.sources.pubmed import PubMedSource
-from litresearch.sources.semantic_scholar import SemanticScholarSource
-from litresearch.sources.web import WebSource
-from litresearch.state import Document, QueryPlan
+from forestresearch.sources.arxiv import ArxivSource
+from forestresearch.sources.crossref import CrossrefSource, strip_jats
+from forestresearch.sources.openalex import OpenAlexSource, reconstruct_abstract
+from forestresearch.sources.pubmed import PubMedSource
+from forestresearch.sources.semantic_scholar import SemanticScholarSource
+from forestresearch.sources.web import WebSource
+from forestresearch.state import Document, QueryPlan
 
 
 @pytest.fixture
@@ -354,7 +354,7 @@ class TestFieldListRegressions:
     """
 
     def test_citation_endpoints_avoid_the_nested_author_field(self):
-        from litresearch.sources.semantic_scholar import CITATION_FIELDS, PAPER_FIELDS
+        from forestresearch.sources.semantic_scholar import CITATION_FIELDS, PAPER_FIELDS
 
         # /paper/{id}/references and /citations 400 on "authors.name" with
         # "Unrecognized or unsupported fields", while /paper/search requires it.
@@ -363,7 +363,7 @@ class TestFieldListRegressions:
         assert "authors.name" in PAPER_FIELDS
 
     def test_crossref_select_omits_subtype(self):
-        from litresearch.sources.crossref import SELECT_FIELDS
+        from forestresearch.sources.crossref import SELECT_FIELDS
 
         # Crossref rejects the whole /works request if any select field is
         # invalid, and "subtype" is not selectable on that route.
@@ -539,3 +539,232 @@ class TestArxivQueryRelaxation:
         assert hits == []
         # Full width, then 4, then 3 -- and no further.
         assert len(calls) == 3
+
+
+class TestWebYear:
+    """Publication years must come from dates, never from incidental digits.
+
+    Every URL below produced a year on a live run -- 2089, 2097, 2076, 2030
+    -- because the first 19xx/20xx digit run anywhere in the URL was taken.
+    """
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "https://pmc.ncbi.nlm.nih.gov/articles/PMC12089777",
+            "https://www.linkedin.com/posts/someone-376142244_tools-activity-7457744824209784832-5iAY",
+            "https://www.mdpi.com/2076-3417/16/8/3966",
+            "https://www.sciencedirect.com/science/article/abs/pii/S0099133320300938",
+            "https://example.com/p/2024-1234",
+            "https://example.com/page?id=2024",
+        ],
+    )
+    def test_digit_runs_in_urls_are_not_years(self, url):
+        assert WebSource._year("", url) is None
+
+    @pytest.mark.parametrize(
+        ("url", "year"),
+        [
+            ("https://blog.example.com/2024/05/12/a-post", 2024),
+            ("https://example.com/news/2025-03-01-launch", 2025),
+            ("https://example.com/archive/2023/", 2023),
+            ("https://example.com/2022", 2022),
+        ],
+    )
+    def test_date_shaped_url_paths_give_a_year(self, url, year):
+        assert WebSource._year("", url) == year
+
+    def test_published_date_wins_over_the_url(self):
+        assert WebSource._year("2025-02-02T00:00:00Z", "https://x.com/2019/01/a") == 2025
+
+    def test_future_years_are_rejected(self):
+        assert WebSource._year("", "https://example.com/2099/01/x") is None
+        assert WebSource._year("2099-01-01", "https://example.com/") is None
+
+    def test_to_hit_uses_the_safe_parser(self, plan):
+        hit = WebSource()._to_hit(
+            {"title": "ToR-Lite", "url": "https://www.mdpi.com/2076-3417/16/8/3966"},
+            plan,
+            0,
+        )
+        assert hit.year is None
+
+
+class TestRateLimitHandling:
+    """A rate-limited source must back off, and must not fail silently.
+
+    On a live run arXiv answered every request with 429. Retries landed 1.5s
+    and 3s later, inside its roughly 30s penalty, and the search round then
+    reported "arxiv:0" for 52 queries -- exactly what a source with nothing
+    relevant reports.
+    """
+
+    @pytest.fixture
+    def responses(self, monkeypatch):
+        """Script the HTTP responses; record requests and requested sleeps."""
+        import asyncio as _asyncio
+
+        import httpx
+
+        from forestresearch.sources import base
+
+        script: list[int] = []
+        seen: list[str] = []
+        sleeps: list[float] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen.append(str(request.url))
+            status = script.pop(0) if script else 200
+            return httpx.Response(status, text="<feed/>")
+
+        client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        monkeypatch.setattr(base, "get_http_client", lambda: client)
+
+        real_sleep = _asyncio.sleep
+
+        async def fake_sleep(delay, *args, **kwargs):
+            sleeps.append(delay)
+            await real_sleep(0)
+
+        monkeypatch.setattr(_asyncio, "sleep", fake_sleep)
+        return script, seen, sleeps
+
+    async def test_429_holds_the_source_for_the_cooldown(self, responses):
+        script, seen, sleeps = responses
+        script.extend([429, 200])
+        source = ArxivSource()
+
+        assert await source.get_text("https://export.arxiv.org/api/query") == "<feed/>"
+        assert len(seen) == 2
+        # The retry waited out arXiv's cooldown, not just tenacity's 1.5s.
+        assert max(sleeps) >= ArxivSource.rate_limit_cooldown - 1
+        assert source.failures == {}
+
+    async def test_429_widens_the_interval_and_success_eases_it(self, responses):
+        script, _, _ = responses
+        script.extend([429, 200])
+        source = ArxivSource()
+
+        await source.get_text("https://export.arxiv.org/api/query")
+        # Doubled to 6s by the 429, then eased by one success.
+        assert source.limiter.min_interval == pytest.approx(4.5)
+        for _ in range(5):
+            await source.get_text("https://export.arxiv.org/api/query")
+        assert source.limiter.min_interval == source.limiter.base_interval
+
+    async def test_exhausted_retries_are_recorded_by_reason(self, responses):
+        script, seen, _ = responses
+        script.extend([429, 429, 429])
+        source = ArxivSource()
+
+        assert await source.get_text("https://export.arxiv.org/api/query") is None
+        assert len(seen) == 3
+        assert source.failures == {"HTTP 429 rate limited": 1}
+
+    async def test_a_persistently_failing_source_is_skipped(self, responses):
+        script, seen, _ = responses
+        script.extend([503] * 9)
+        source = ArxivSource()
+
+        for _ in range(source.trip_after):
+            assert await source.get_text("https://export.arxiv.org/api/query") is None
+        requests_made = len(seen)
+
+        # Tripped: the next call fails at once instead of waiting out retries.
+        assert await source.get_text("https://export.arxiv.org/api/query") is None
+        assert len(seen) == requests_made
+        assert source.failures["skipped while unavailable"] == 1
+        assert source.failures["HTTP 503"] == source.trip_after
+
+    async def test_client_errors_do_not_trip_the_source(self, responses):
+        script, _, _ = responses
+        script.extend([404] * 5)
+        source = ArxivSource()
+        for _ in range(5):
+            assert await source.get_text("https://export.arxiv.org/api/query") is None
+        assert source.failures == {}
+
+    async def test_search_round_reports_failed_requests(self, monkeypatch):
+        from forestresearch.nodes import search
+
+        class FailingSource(ArxivSource):
+            async def search(self, plan):
+                self.failures["HTTP 429 rate limited"] += 1
+                return []
+
+        source = FailingSource()
+        monkeypatch.setattr(search, "active_sources", lambda: {"arxiv": source})
+        plans = [
+            QueryPlan(intent_id="i", subquestion_id="RQ1", source="arxiv", query=q)
+            for q in ("a", "b")
+        ]
+
+        result = await search.search_all({"query_plans": plans, "intents": {}})
+        log = "\n".join(result["log"])
+        assert "arxiv:0" in log
+        assert "arxiv: 2 request(s) failed (HTTP 429 rate limited x2)" in log
+
+
+class TestArxivPhraseRelaxation:
+    """ANDed quoted phrases relax to their words, not to fewer phrases.
+
+    On one run, 13 of 14 generated arXiv queries were three or more quoted
+    phrases. Three phrases returned nothing on 13 of them and two phrases on
+    11; the first four words, unquoted, found results for 6 of 7 tested.
+    """
+
+    QUERY = '"LLM-based systems" AND "query decomposition" AND "literature research"'
+
+    def plan_for(self, query: str) -> QueryPlan:
+        return QueryPlan(intent_id="i", subquestion_id="RQ1", source="arxiv", query=query)
+
+    def test_words_keep_phrase_order_without_generic_vocabulary(self):
+        words = ArxivSource()._word_clauses(self.plan_for(self.QUERY))
+        # "systems" and "research" are generic; "AND" is a stopword.
+        assert words == ["all:LLM-based", "all:query", "all:decomposition", "all:literature"]
+
+    def test_date_ranges_are_not_text_clauses(self):
+        plan = self.plan_for('"LLM agents" AND "literature reviews" AND "2023..2026"')
+        assert ArxivSource()._clauses(plan) == ['all:"LLM agents"', 'all:"literature reviews"']
+        assert "all:2023" not in ArxivSource()._word_clauses(plan)
+
+    async def test_a_phrase_query_relaxes_to_its_words(self, monkeypatch):
+        source = ArxivSource()
+        queries: list[str] = []
+
+        async def fake_get_text(url, params=None):
+            queries.append(params["search_query"])
+            return EMPTY_ATOM if '"' in params["search_query"] else ARXIV_ATOM
+
+        monkeypatch.setattr(source, "get_text", fake_get_text)
+        hits = await source.search(self.plan_for(self.QUERY))
+        assert len(hits) == 2
+        assert queries == [
+            'all:"LLM-based systems" AND all:"query decomposition" AND all:"literature research"',
+            "all:LLM-based AND all:query AND all:decomposition AND all:literature",
+        ]
+
+    async def test_relaxation_still_stops_after_three_requests(self, monkeypatch):
+        source = ArxivSource()
+        calls: list[str] = []
+
+        async def fake_get_text(url, params=None):
+            calls.append(params["search_query"])
+            return EMPTY_ATOM
+
+        monkeypatch.setattr(source, "get_text", fake_get_text)
+        assert await source.search(self.plan_for(self.QUERY)) == []
+        assert len(calls) == 3
+
+    async def test_a_single_phrase_does_not_relax_to_one_word(self, monkeypatch):
+        source = ArxivSource()
+        calls: list[str] = []
+
+        async def fake_get_text(url, params=None):
+            calls.append(params["search_query"])
+            return EMPTY_ATOM
+
+        monkeypatch.setattr(source, "get_text", fake_get_text)
+        # "research" is generic, so the words would be just "deep".
+        await source.search(self.plan_for('"deep research"'))
+        assert calls == ['all:"deep research"']

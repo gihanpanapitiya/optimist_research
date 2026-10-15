@@ -1,6 +1,6 @@
 """PDF fetching and section-aware text extraction.
 
-Gated behind ``LITRESEARCH_READ_FULL_TEXT``. In the default abstract-only
+Gated behind ``FORESTRESEARCH_READ_FULL_TEXT``. In the default abstract-only
 mode the reader works from title, abstract and metadata, which is fast and
 cheap enough to iterate on the graph logic; turning this on gives the
 evidence extractor real section text so that ``location`` fields point at
@@ -119,7 +119,7 @@ def extract_text(pdf_path: Path, max_chars: int = 60_000) -> ExtractedText | Non
     except ImportError:
         logger.warning(
             "full-text reading is enabled but pymupdf is not installed; "
-            "install with `pip install 'litresearch[pdf]'`"
+            "install with `pip install 'forestresearch[pdf]'`"
         )
         return None
 

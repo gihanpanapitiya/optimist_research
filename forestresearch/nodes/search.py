@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections import Counter
 
 from ..config import get_settings
 from ..sources.registry import active_sources
@@ -38,6 +39,7 @@ async def search_all(state: ResearchState) -> dict:
     settings = get_settings()
     sources = active_sources()
     semaphore = asyncio.Semaphore(settings.max_concurrent_requests)
+    failures_before = {name: source.failures.copy() for name, source in sources.items()}
 
     async def run(plan: QueryPlan) -> tuple[QueryPlan, list[RawHit]]:
         source = sources.get(plan.source)
@@ -77,16 +79,25 @@ async def search_all(state: ResearchState) -> dict:
         updated_intents[intent_id] = updated
 
     breakdown = ", ".join(f"{s}:{n}" for s, n in sorted(per_source.items())) or "nothing"
+    lines = [f"ran {len(plans)} queries, {len(all_hits)} raw hits ({breakdown})"]
+    # A failed request degrades to an empty result, so a rate-limited source
+    # would otherwise read as "arxiv:0" -- indistinguishable from a source
+    # that had nothing relevant. Say so whenever it happened.
+    for name, source in sorted(sources.items()):
+        failed = source.failures - failures_before.get(name, Counter())
+        if failed:
+            reasons = ", ".join(f"{reason} x{n}" for reason, n in failed.most_common())
+            lines.append(
+                f"{name}: {failed.total()} request(s) failed ({reasons}); its "
+                f"results this round are incomplete"
+            )
+            logger.warning(lines[-1])
 
     return {
         "pending_hits": all_hits,
         "intents": updated_intents,
         "budget": BudgetUsage(search_operations=len(plans)),
-        "log": [
-            log_line(
-                f"ran {len(plans)} queries, {len(all_hits)} raw hits ({breakdown})"
-            )
-        ],
+        "log": [log_line(line) for line in lines],
     }
 
 

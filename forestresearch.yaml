@@ -1,18 +1,18 @@
-# litresearch configuration.
+# forestresearch configuration.
 #
 # Commit this file. Keep API keys out of it -- those belong in .env, which is
 # gitignored. Precedence, lowest first:
 #
-#   defaults in litresearch/config.py  <  this file  <  .env  <  environment
+#   defaults in forestresearch/config.py  <  this file  <  .env  <  environment
 #   variables  <  CLI flags
 #
 # So a committed setting here can always be overridden for one run:
-#   litresearch run "..." --max-documents 20
-#   LITRESEARCH_BUDGET__MAX_DOCUMENTS_READ=20 litresearch run "..."
+#   forestresearch run "..." --max-documents 20
+#   FORESTRESEARCH_BUDGET__MAX_DOCUMENTS_READ=20 forestresearch run "..."
 #
 # Files nearer the working directory win over ones further up, merged key by
-# key -- so a litresearch.yaml in a subdirectory can change one budget value
-# without restating the rest. `litresearch config` prints what is in effect
+# key -- so a forestresearch.yaml in a subdirectory can change one budget value
+# without restating the rest. `forestresearch config` prints what is in effect
 # and which files it came from.
 
 # ---------------------------------------------------------------------------
@@ -137,7 +137,7 @@ output_dir: research
 # API; drop to 2 for a local model, which serializes requests anyway.
 max_concurrent_readers: 6
 max_concurrent_requests: 8
-http_timeout_seconds: 300.0
+http_timeout_seconds: 60.0
 
 # Ollama only. Ollama defaults to a 4096-token window whatever the model
 # supports, and truncates silently -- far too small, since one screening

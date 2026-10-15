@@ -102,7 +102,7 @@ async def screen_and_rank(state: ResearchState) -> dict:
     # while already-scored pairs are not paid for twice.
     pending: dict[tuple[str, ...], list[Document]] = defaultdict(list)
     for doc in documents.values():
-        if doc.status in ("failed", "skipped"):
+        if doc.status == "failed":
             continue
         unscored = tuple(sq for sq in active_ids if sq not in doc.relevance)
         if unscored:
@@ -417,7 +417,7 @@ def _select(
             for doc in ranked.values()
             if doc.relevance.get(sq.id, 0.0) >= threshold
             and sq.id not in doc.read_for
-            and doc.status not in ("failed", "skipped")
+            and doc.status != "failed"
         ]
         candidates.sort(
             key=lambda d: (d.relevance.get(sq.id, 0.0) * 0.6 + d.rank_score * 0.4),

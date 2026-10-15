@@ -7,8 +7,8 @@ no document-subquestion pair is read twice, and caps are respected.
 
 from __future__ import annotations
 
-from litresearch.config import get_settings
-from litresearch.nodes.screen import (
+from forestresearch.config import get_settings
+from forestresearch.nodes.screen import (
     _citation_score,
     _intent_yields,
     _novelty,
@@ -17,8 +17,8 @@ from litresearch.nodes.screen import (
     _select,
     _source_quality,
 )
-from litresearch.state import BudgetUsage, Document, Provenance, SearchIntent, Subquestion
-from litresearch.store.canonicalize import significant_tokens
+from forestresearch.state import BudgetUsage, Document, Provenance, SearchIntent, Subquestion
+from forestresearch.store.canonicalize import significant_tokens
 
 
 def doc(doc_id: str, **kwargs) -> Document:

@@ -42,7 +42,7 @@ class PubMedSource(SearchSource):
         super().__init__()
 
     def _common_params(self) -> dict:
-        params = {"db": "pubmed", "tool": "litresearch"}
+        params = {"db": "pubmed", "tool": "forestresearch"}
         if self.settings.contact_email:
             params["email"] = self.settings.contact_email
         if self.api_key:
