@@ -59,8 +59,8 @@
 % ================================================================ headings
 \titleformat{\section}
   {\hfont\Large\bfseries\color{ink}}
-  {\makebox[2.1em][l]{\color{accent}\secnum}}
-  {0pt}{}
+  {{\color{accent}\thesection}}
+  {0.7em}{}
   [\vspace{-0.55em}{\color{hairline}\rule{\linewidth}{0.6pt}}]
 \titleformat{\subsection}
   {\hfont\large\bfseries\color{ink}}
@@ -77,7 +77,7 @@
 \fancyhf{}
 \renewcommand{\headrulewidth}{0pt}
 \renewcommand{\sectionmark}[1]{\markboth{#1}{}}
-\fancyhead[L]{\hfont\scriptsize\color{muted}\textbf{\color{accent}litresearch}\quad Iterative literature research agent}
+\fancyhead[L]{\hfont\scriptsize\color{muted}\textbf{\color{accent}FOREST}\quad Iterative literature research agent}
 \fancyhead[R]{\hfont\scriptsize\color{muted}\leftmark}
 \fancyfoot[C]{\hfont\footnotesize\color{muted}\thepage}
 \fancypagestyle{plain}{\fancyhf{}\fancyfoot[C]{\hfont\footnotesize\color{muted}\thepage}}
@@ -91,9 +91,9 @@
 \setlist[description]{font=\hfont\bfseries\color{accent}}
 \setlist[enumerate]{label={\hfont\bfseries\color{accent}\arabic*}}
 
-\newcommand{\secnum}{\ifnum\value{section}<10 0\fi\arabic{section}}
 \newcommand{\code}[1]{\texttt{#1}}
-\newcommand{\sys}{{\hfont\bfseries litresearch}}
+\newcommand{\sys}{{\hfont\bfseries FOREST}}
+\newcommand{\sysfull}{{\hfont\bfseries FOREST Deep Research}}
 
 % ================================================================ tables
 \setlength{\aboverulesep}{0pt}
@@ -138,13 +138,13 @@
 {\hfont\footnotesize\bfseries\color{accent}TECHNICAL REPORT\hspace{0.8em}{\color{hairline}|}\hspace{0.8em}{\color{muted}OCTOBER 2026}}
 
 \vspace{1.0em}
-{\hfont\fontsize{30}{34}\selectfont\bfseries\color{ink}litresearch}
+{\hfont\fontsize{30}{34}\selectfont\bfseries\color{ink}FOREST Deep Research}
 
 \vspace{0.45em}
-{\hfont\Large\color{muted}An iterative, state-centric agent for\\autonomous literature research}
+{\hfont\Large\color{muted}An iterative, state-centric agent for autonomous literature research}
 
 \vspace{1.3em}
-{\hfont\small\bfseries Gihan Uthpala}\hspace{0.8em}{\hfont\small\color{muted}\texttt{gihanuthpala@gmail.com}}
+{\hfont\small\bfseries Gihan Panapitiya}\hspace{0.8em}{\hfont\small\color{muted}\texttt{}}
 
 \vspace{0.6em}
 {\color{hairline}\rule{\linewidth}{0.6pt}}
@@ -153,30 +153,8 @@
 % ================================================================ abstract
 \begin{abstractbox}
 {\hfont\footnotesize\bfseries\color{accent}ABSTRACT}\par\smallskip
-Most retrieval-augmented systems treat literature search as a single
-retrieval step followed by summarization. Real literature research works
-differently: the investigator's understanding of the question changes as
-they read, new subquestions appear, and evidence is weighed, not just
-collected. We present \sys{}, an open-source agent that runs literature
-research as an \emph{iterative evidence-acquisition process} over an
-explicit, mutable research state. A research question is broken into a tree
-of subquestions, each served by \emph{search intents} that are translated
-into source-specific queries over arXiv, OpenAlex, Crossref, PubMed,
-Semantic Scholar and the web. Results are merged into a canonical,
-provenance-preserving document registry through a conservative four-tier
-deduplication hierarchy. The registry is expanded by citation snowballing
-until a saturation criterion is met, and then screened, ranked and
-allocated to subquestions round-robin. Documents are read in parallel into
-a structured \emph{evidence store} of claims with support, location, type
-and strength. A critic reviews the state along eight dimensions and returns
-\emph{research actions} rather than a binary verdict: it can add, split,
-rephrase, deprioritize or close subquestions, so the research plan is an
-output of the investigation as well as an input. The final report is
-written section by section from the evidence store, and every citation
-resolves to a retrieved document. We describe the design, the deterministic
-machinery that keeps a language-model pipeline auditable, and a case study
-that read 28 of 237 retrieved documents in about three and a half minutes.
-We also report weaknesses the case study exposed.
+Most retrieval-augmented systems treat literature search as a single retrieval step followed by summarization. Real literature research works differently: the investigator's understanding of the question changes as they read, new subquestions appear, and evidence is weighed, not just collected. We present \sysfull{} (\sys{}), an open-source agent that runs literature research as an \emph{iterative evidence-acquisition process} over an explicit, mutable research state. A research question is broken into a tree of subquestions, each served by \emph{search intents} that are translated into source-specific queries over arXiv, OpenAlex, Crossref, PubMed, Semantic Scholar and the web. Results are merged into a canonical, provenance-preserving document registry through a conservative four-tier deduplication hierarchy. The registry is expanded by citation snowballing until a saturation criterion is met, and then screened, ranked and allocated to subquestions round-robin. Documents are read in parallel into a structured \emph{evidence store} of claims with support, location, type and strength. A critic reviews the state along eight dimensions and returns \emph{research actions} rather than a binary verdict: it can add, split, rephrase, deprioritize or close subquestions, so the research plan is an output of the investigation as well as an input. The final report is written section by section from the evidence store, and every citation resolves to a retrieved document. We describe the design, the deterministic machinery that keeps a language-model pipeline auditable.
+% and a case study that read 28 of 237 retrieved documents in about three and a half minutes. We also report weaknesses the case study exposed.
 \end{abstractbox}
 
 \vspace{0.3em}
@@ -189,25 +167,11 @@ evidence synthesis \textperiodcentered{} LangGraph}
 % ================================================================ intro
 \section{Introduction}
 
-Large language models (LLMs) combined with retrieval have become a standard
-way to answer knowledge-intensive questions~\citep{lewis2020rag}. For
-\emph{literature research}, meaning the task of establishing what a body of
-scholarly work says about a question, a single round of
-retrieve-then-summarize falls short in three ways.
+Large language models (LLMs) combined with retrieval have become a standard way to answer knowledge-intensive questions~\citep{lewis2020rag}. For \emph{literature research}, meaning the task of establishing what a body of scholarly work says about a question, a single round of retrieve-then-summarize falls short in three ways.
 
-First, the right decomposition of a research question is rarely clear at
-the start. It becomes clear while reading: a paper introduces terminology
-the investigator did not know, shows that a subquestion has two parts that
-need separate evidence, or shows that another subquestion is a dead end.
-Second, the output of reading should be \emph{evidence}, not summaries. A
-summary turns a paper into a single opinion. Evidence keeps each claim
-separate from what supports it, so a later stage can ask whether a claim is
-established by several independent studies or asserted by one. Third,
-systematic reviewers have long known that keyword search alone misses
-relevant work, and that following citations backward and forward is needed
-for coverage~\citep{wohlin2014snowballing,kitchenham2004procedures}.
+First, the right decomposition of a research question is rarely clear at the start. It becomes clear while reading: a paper introduces terminology the investigator did not know, shows that a subquestion has two parts that need separate evidence, or shows that another subquestion is a dead end. Second, the output of reading should be \emph{evidence}, not summaries. A summary turns a paper into a single opinion. Evidence keeps each claim separate from what supports it, so a later stage can ask whether a claim is established by several independent studies or asserted by one. Third, systematic reviewers have long known that keyword search alone misses relevant work, and that following citations backward and forward is needed for coverage~\citep{wohlin2014guidelines,kitchenham2004procedures}.
 
-\sys{} is built around these observations. Its central design principle is
+\sysfull{} (\sys{}) is built around these observations. Its central design principle is
 that \textbf{the research plan is not fixed}: subquestions, intents,
 documents, evidence, contradictions and coverage estimates all live in one
 explicit state, and every stage of the pipeline reads and changes that
@@ -246,32 +210,94 @@ state. The contributions of this paper are:
 Retrieval augmentation conditions generation on retrieved
 passages~\citep{lewis2020rag}. Agentic variants interleave reasoning with
 tool use~\citep{yao2023react} or with retrieval at each reasoning
-step~\citep{trivedi2023ircot,wei2022cot}. Self-reflection methods have the
-model critique and revise its own output~\citep{shinn2023reflexion,madaan2023selfrefine}.
-\sys{} uses reflection at the level of the \emph{research plan} rather than
-the generated text: the critic's output is a set of typed edits to the
-subquestion tree and new search intents, and these are applied to the state.
+step~\citep{trivedi2023ircot,wei2022cot}, and decomposition methods split a
+question into simpler subquestions that are answered in
+turn~\citep{press2023selfask,zhou2023leasttomost}. Self-RAG~\citep{asai2024selfrag}
+lets the model decide when to retrieve and critique its own retrieved
+passages and generations, and more recent work trains reasoning models to
+issue searches during long reasoning chains, either through prompting
+frameworks~\citep{li2025searcho1} or reinforcement learning in live web
+environments~\citep{zheng2025deepresearcher}.
+Self-reflection methods have the model critique and revise its own
+output~\citep{shinn2023reflexion,madaan2023selfrefine}. In all of these, the
+decomposition and the critique live inside the model's context. \sys{}
+moves both into explicit state. The subquestion tree is data that every
+stage reads, and the critic's output is a set of typed edits to that tree
+plus new search intents, which are applied deterministically.
 
-\paragraph{LLM systems for scholarly synthesis.}
+\paragraph{Deep research agents and their evaluation.}
+Commercial ``deep research'' products~\citep{openai2025deepresearch} popularized agents that browse for many minutes and return long, cited reports. STORM~\citep{shao2024storm} outlines Wikipedia-style articles through perspective-guided question asking, and Co-STORM~\citep{jiang2024costorm} adds a human to the conversation. A growing set of benchmarks measures these agents: BrowseComp for hard-to-find facts~\citep{wei2025browsecomp}, DeepResearch Bench~\citep{du2025deepresearchbench}, ResearchRubrics~\citep{sharma2025researchrubrics} and DEER~\citep{han2025deer} for report quality against expert criteria, Total Recall QA for verifiable recall~\citep{rafiee2026totalrecall}, and IDRBench for the value of clarifying interaction~\citep{feng2026idrbench}. Two findings bear directly on our design. First, SAGE~\citep{hu2026sage} finds that current agents struggle with reasoning-intensive scientific retrieval, and that BM25 outperforms LLM-based retrievers inside an agent because the agents issue keyword-oriented sub-queries. \sys{} accepts that sources differ and routes each search intent into source-specific queries rather than one
+query string for all of them. Second, these benchmarks evaluate an
+end-to-end answer. \sys{}'s state records why each document was found and
+read, which makes stage-level evaluation possible (\cref{sec:discussion}).
+
+\paragraph{LLM systems for scholarly search and synthesis.}
 PaperQA~\citep{lala2023paperqa} answers scientific questions by retrieving
-and reading full-text papers. OpenScholar~\citep{asai2024openscholar} builds
-a retrieval datastore over open-access literature for citation-backed
-synthesis. STORM~\citep{shao2024storm} uses perspective-guided question
-asking to outline long-form articles. Work on citation-grounded
-generation~\citep{gao2023alce} shows that LLMs often cite sources that do
-not support the claim. \sys{} addresses this structurally. Citations are
-document identifiers taken from the evidence passed to each report section,
-unresolvable identifiers are removed, and the reference list is built from
-the document registry rather than generated by the model.
+and reading full-text papers. OpenScholar~\citep{asai2024openscholar} and
+Ai2 Scholar QA~\citep{singh2025scholarqa} build open retrieval pipelines
+over scholarly corpora for citation-backed synthesis. For paper search
+specifically, PaSa~\citep{he2025pasa} trains an agent with reinforcement
+learning to invoke search tools, read papers and expand through their
+references, and SPAR~\citep{shi2025spar} uses multiple agents with
+reference-chain query decomposition and query evolution. LitSearch~\citep{ajith2024litsearch}
+provides a retrieval benchmark for literature search, and
+LitLLMs~\citep{agarwal2024litllms} studies literature-review writing as
+keyword extraction, retrieval, re-ranking and generation. Knowledge
+Navigator~\citep{katz2024knowledgenavigator} organizes the results of a
+broad query into a topic hierarchy that a user refines interactively, and
+AutoSurvey~\citep{wang2024autosurvey} drafts full surveys from retrieved
+papers via outlines and section-wise generation. Further along, Agent
+Laboratory~\citep{schmidgall2025agentlab} and The AI
+Scientist~\citep{lu2024aiscientist} place literature review as one stage in
+an automated research pipeline. Most of these systems either fix the
+decomposition at the start or adapt only the next query. \sys{} makes the
+plan itself revisable: the critic can add, split, rephrase, deprioritize or
+close subquestions as the evidence comes in. It also keeps an explicit
+evidence store of claims, rather than passing retrieved text straight to a
+writer. The closest systems engineering is AgentR~\citep{samanta2026agentr},
+which persists the intents, queries, paper assessments and gap analyses of
+an LLM literature-review workflow as durable artifacts for recovery and
+auditing. \sys{} shares that view of state, but uses it to drive adaptive
+planning rather than mainly for fault tolerance.
 
-\paragraph{Systematic review methodology.}
-Kitchenham's procedures~\citep{kitchenham2004procedures} and the PRISMA
+\paragraph{Citation grounding.}
+Work on citation-grounded generation~\citep{gao2023alce} shows that LLMs
+often cite sources that do not support the claim. The problem persists in
+deep research agents: across ten models and agents, 3--13\% of citation
+URLs are hallucinated and 5--18\% do not resolve, with deep research agents
+hallucinating at higher rates than search-augmented
+LLMs~\citep{rao2026referencehallucinations}, and cited content is often
+accessible and relevant but not factually
+supportive~\citep{onweller2026citedbutnotverified}. These studies detect
+bad citations after the fact. \sys{} prevents the first kind
+structurally. Citations are document identifiers taken from the evidence
+passed to each report section, unresolvable identifiers are removed, and
+the reference list is built from the document registry rather than
+generated by the model. Whether a cited claim is actually supported still
+depends on the reader's extraction, which is why the evidence store
+records support and strength separately from the claim.
+
+\paragraph{Systematic review methodology and its automation.}
+Kitchenham's procedures~\citep{kitchenham2004procedures, kitchenham2007guidelines} and the PRISMA
 statement~\citep{page2021prisma} formalize search, screening, eligibility
-and synthesis for human-conducted reviews. Wohlin~\citep{wohlin2014snowballing}
+and synthesis for human-conducted reviews. Wohlin~\citep{wohlin2014guidelines}
 describes backward and forward snowballing as an iterative procedure that
-runs until no new relevant papers are found. \sys{} implements an
-automated, budgeted version of this cycle. Its saturation criterion directly
-operationalizes ``no new papers.''
+runs until no new relevant papers are found, and tool support for forward
+snowballing remains uneven~\citep{januario2025forwardsnowballing}. Surveys
+of AI for systematic reviews~\citep{bolanos2024aireviews} and a scoping
+review of LLM use~\citep{lieberum2025llmsr} find LLMs applied most often to
+search, study selection and data extraction, but judge them not yet ready
+for unsupervised use. Individual studies evaluate LLMs for Boolean query
+formulation~\citep{wang2023booleanquery} and title--abstract
+screening~\citep{syriani2023screening}. InsightAgent~\citep{qiu2025insightagent}
+keeps a human in the loop and reports completing a systematic review in
+hours. SciLitBench~\citep{zabaleta2026scilitbench} evaluates screening and
+extraction as linked stages, and ARISMA~\citep{moghaddam2026arisma}
+proposes reporting guidelines for AI-assisted reviews. \sys{} implements
+an automated, budgeted version of the search--screen--snowball cycle. Its
+saturation criterion directly operationalizes ``no new papers,'' and its
+provenance records are the kind of audit trail such guidelines ask for.
+It does not claim to replace a protocol-driven systematic review.
 
 \paragraph{Record linkage.}
 Deduplicating bibliographic records is an instance of record
@@ -310,11 +336,13 @@ Five principles shaped the implementation.
 \label{sec:arch}
 
 \sys{} is implemented as a LangGraph~\citep{langgraph} state graph
-(\cref{fig:graph}). It contains two loops with different jobs. The
-\textbf{inner loop} (snowball $\circlearrowleft$ screening) expands the
-citation neighbourhood of documents already found and stops on a saturation
-criterion. The \textbf{outer loop} (critique $\circlearrowleft$ intents) is
-the adaptive research loop, and it can rewrite the research plan.
+(\cref{fig:graph}) built around two loops. The \textbf{inner loop} widens
+the corpus: it follows the citations of relevant documents already found,
+screens the new candidates, and stops once further rounds turn up few new
+documents (\cref{sec:snowball}). The \textbf{outer loop} steers the
+research: after each round of reading, a critic reviews
+the evidence, edits the research plan, and sends the system back to search
+for what is still missing (\cref{sec:critic}).
 
 \begin{figure}[t]
 \centering
@@ -407,14 +435,8 @@ The state records the investigation as a hierarchy:
 \underbrace{\text{documents}}_{\text{canonical}} \;\to\;
 \underbrace{\text{evidence}}_{\text{claims}} .
 \]
-The two middle levels are deliberately separate. A \emph{subquestion} states
-what we need to \emph{know}. A \emph{search intent} states what kind of
-document would close that gap, for example ``empirical comparisons of
-episodic versus semantic memory on long-horizon benchmarks.'' Because they
-are separate, query wording can be rewritten freely without changing the
-research objective it serves. Each intent also records its own yield
-(documents found, and how many screened as relevant), which is the signal
-the critic uses to judge whether an intent is working.
+
+Subquestions and intents are kept as separate levels on purpose. A \emph{subquestion} states what we need to \emph{know}, for example ``How does episodic memory compare with semantic memory for long-horizon tasks?'' A \emph{search intent} describes a kind of document that would help answer it, for example ``empirical comparisons of episodic versus semantic memory on long-horizon benchmarks.'' A subquestion can have several intents. This separation lets the system change \emph{how} it searches (adding, closing or rewording intents and their queries) without changing \emph{what} it is trying to find out. Each intent also records its \emph{yield}: how many documents its queries found, and how many of those were screened as relevant. The critic uses these yields to judge whether an intent is still productive.
 
 \paragraph{Reducers under fan-out.}
 Parallel graph branches write to shared channels, so each channel has a
@@ -432,15 +454,18 @@ work.
     maximum of each subquestion's relevance score, and the minimum
     snowball depth. A sparse web hit therefore never degrades a rich
     record.
-  \item \textbf{Document status forms a lattice.}
+  \item \textbf{Document status never moves backward.} Several branches
+    can return copies of the same document, and some copies are out of
+    date. For example, a reader may report a document as \code{read}
+    while another branch, working from an earlier copy, still reports it
+    as \code{selected}. To merge these, statuses are ranked
     \[
-      \texttt{candidate} \prec \texttt{selected} \prec \texttt{skipped}
-      \prec \texttt{failed} \prec \texttt{read}.
+      \texttt{candidate} < \texttt{selected}
+      < \texttt{failed} < \texttt{read},
     \]
-    Merging takes the join. \code{read} dominates, so a completed read
-    never regresses. \code{failed} outranks \code{selected}, so a failed
-    read is recorded as a failure and the document is not re-queued in
-    every later iteration.
+    and the higher one is kept. A finished read is therefore never
+    undone, and a document whose read failed stays \code{failed} instead
+    of going back into the reading queue in every later iteration.
 \end{itemize}
 
 Per-iteration work lists (query plans, pending hits, the reading queue)
@@ -509,7 +534,7 @@ arXiv            & ---           & none        & very recent CS/ML preprints \\
 OpenAlex~\citep{priem2022openalex} & --- & both & broad coverage, DOIs, snowballing \\
 Crossref         & ---           & backward    & deposited reference lists \\
 PubMed           & optional      & none        & biomedical literature \\
-Semantic Scholar~\citep{kinney2023s2} & effectively required & both & richest citation graph \\
+Semantic Scholar~\citep{kinney2025semanticscholaropendata} & effectively required & both & richest citation graph \\
 Web (Tavily)     & required      & none        & grey literature, documentation \\
 \bottomrule
 \end{tabular}
@@ -698,7 +723,7 @@ half lack a DOI. Its DOI-bearing entries are therefore looked up in
 OpenAlex in batches of 50 to recover titles, authors and abstracts.
 
 \paragraph{Saturation.} Following Wohlin's stopping rule (``until no new
-papers are found'')~\citep{wohlin2014snowballing}, round $k$ is assigned a
+papers are found'')~\citep{wohlin2014guidelines}, round $k$ is assigned a
 yield
 \begin{equation}
 \rho_k = \frac{\#\,\text{new canonical documents in round } k}
@@ -858,7 +883,7 @@ run leaves a usable partial corpus.
 provider-agnostic \code{init\_chat\_model}, Pydantic and httpx, with
 Anthropic, OpenAI, Google and Ollama back-ends available as optional
 extras. Configuration has four layers, lowest priority first: code
-defaults, a committed \code{litresearch.yaml} (merged key by key along the
+defaults, a committed \code{forestresearch.yaml} (merged key by key along the
 directory path), \code{.env} for secrets, and environment variables, which
 the CLI's flags also set.
 
@@ -876,7 +901,7 @@ the actual state. \code{gpt-oss} passed a screening test but judged an
 obviously relevant paper irrelevant during extraction and returned no
 evidence, a failure that a general benchmark would not have revealed.
 
-\paragraph{Testing.} 250 offline tests cover the deterministic machinery:
+\paragraph{Testing.} 284 offline tests cover the deterministic machinery:
 the deduplication hierarchy, reducers under fan-in, ranking and allocation,
 snowball saturation, source parsing against recorded API responses, and
 corpus round-tripping. They also run the whole graph end to end against a
