@@ -85,7 +85,7 @@
 
 \author{
   Gihan Panapitiya \\
-  % \texttt{gihanuthpala@gmail.com} \\
+  Independent Researcher \\
 }
 
 \date{October 2026}
@@ -104,8 +104,7 @@
 \maketitle
 
 \begin{abstract}
-Most retrieval-augmented systems treat literature search as a single retrieval step followed by summarization. Real literature research works differently: the investigator's understanding of the question changes as they read, new subquestions appear, and evidence is weighed, not just collected. We present \sysfull{} (\sys{}), an open-source agent that runs literature research as an \emph{iterative evidence-acquisition process} over an explicit, mutable research state. A research question is broken into a tree of subquestions, each served by \emph{search intents} that are translated into source-specific queries over arXiv, OpenAlex, Crossref, PubMed, Semantic Scholar and the web. Results are merged into a canonical, provenance-preserving document registry through a conservative four-tier deduplication hierarchy. The registry is expanded by citation snowballing until a saturation criterion is met, and then screened, ranked and allocated to subquestions round-robin. Documents are read in parallel into a structured \emph{evidence store} of claims with support, location, type and strength. A critic reviews the state along eight dimensions and returns \emph{research actions} rather than a binary verdict: it can add, split, rephrase, deprioritize or close subquestions, so the research plan is an output of the investigation as well as an input. The final report is written section by section from the evidence store, and every citation resolves to a retrieved document. We describe the design, the deterministic machinery that keeps a language-model pipeline auditable.
-% and a case study that read 28 of 237 retrieved documents in about three and a half minutes. We also report weaknesses the case study exposed.
+Most retrieval-augmented systems treat literature search as a single retrieval step followed by summarization. Real literature research works differently: the investigator's understanding of the question changes as they read, new subquestions appear, and evidence is weighed, not just collected. We present \sysfull{} (\sys{}), an open-source agent that runs literature research as an \emph{iterative evidence-acquisition process} over an explicit, mutable research state. A research question is broken into a tree of subquestions, each served by \emph{search intents} that are translated into source-specific queries over arXiv, OpenAlex, Crossref, PubMed, Semantic Scholar and the web. Results are merged into a canonical, provenance-preserving document registry through a conservative four-tier deduplication hierarchy. The registry is expanded by citation snowballing until a saturation criterion is met, and then screened, ranked and allocated to subquestions round-robin. Documents are read in parallel into a structured \emph{evidence store} of claims with support, location, type and strength. A critic reviews the state along eight dimensions and returns \emph{research actions} rather than a binary verdict: it can add, split, rephrase, deprioritize or close subquestions, so the research plan is an output of the investigation as well as an input. The final report is written section by section from the evidence store, and every citation resolves to a retrieved document. We describe the design, the deterministic machinery that keeps a language-model pipeline auditable, and a case study that read 28 of 237 retrieved documents in about three and a half minutes. We also report weaknesses the case study exposed.
 \end{abstract}
 
 \keywords{LLM agents \and literature review automation \and
@@ -119,13 +118,13 @@ Large language models (LLMs) combined with retrieval have become a standard way 
 
 First, the right decomposition of a research question is rarely clear at the start. It becomes clear while reading: a paper introduces terminology the investigator did not know, shows that a subquestion has two parts that need separate evidence, or shows that another subquestion is a dead end. Second, the output of reading should be \emph{evidence}, not summaries. A summary turns a paper into a single opinion. Evidence keeps each claim separate from what supports it, so a later stage can ask whether a claim is established by several independent studies or asserted by one. Third, systematic reviewers have long known that keyword search alone misses relevant work, and that following citations backward and forward is needed for coverage~\citep{wohlin2014guidelines,kitchenham2004procedures}.
 
-\sysfull{} (\sys{}) is built around these observations. Its central design principle is
+\sysfull{} (\sys{})\footnote{Code: \url{https://github.com/gihanpanapitiya/optimist_research}.} is built around these observations. Its central design principle is
 that \textbf{the research plan is not fixed}: subquestions, intents,
 documents, evidence, contradictions and coverage estimates all live in one
 explicit state, and every stage of the pipeline reads and changes that
 state. The contributions of this paper are:
 
-\begin{callout}{accent}{Contributions}
+\begin{callout}[unbreakable]{accent}{Contributions}
 \begin{enumerate}[leftmargin=*]
   \item A \textbf{state-centric architecture} for literature research, in
     which a five-level hierarchy (question $\to$ subquestion $\to$ intent
@@ -952,21 +951,24 @@ when no experiment can be checked.
 
 \begin{callout}{warn}{What the run exposed}
 The case study also showed six
-weaknesses, which we report because they are informative.
+weaknesses, which we report because they are informative. The first two
+have since been fixed in the code.
 \begin{enumerate}[leftmargin=*]
   \item \textbf{Repeated snowball seeds.} The second round chose the
     \emph{same} four seeds in the same direction and spent a round
     fetching 48 edges that were already in the corpus. The seed selector
-    excludes snowballed documents as seeds but not documents that have
+    excluded snowballed documents as seeds but not documents that had
     already been expanded. The saturation rule needs two low-yield rounds,
-    so the round cap ended snowballing, not saturation. Excluding
-    (seed, direction) pairs that have already been expanded would fix this.
+    so the round cap ended snowballing, not saturation. \emph{Fixed:} the
+    state now records expanded (seed, direction) pairs, and later rounds
+    and critic requests skip them.
   \item \textbf{Inflated intent-yield counts.} When RQ6 was added, all 237
     documents were re-screened against it, and each re-screened document
     credited its originating intents again. One intent therefore reports
     18 relevant documents out of 15 found. The critic reads these yields
-    when judging saturation, so the counts should be de-duplicated per
-    (intent, document) pair.
+    when judging saturation. \emph{Fixed:} yields are now recomputed from
+    the corpus as distinct documents found by each intent's searches,
+    rather than incremented on every screening pass.
   \item \textbf{No arXiv hits.} arXiv returned zero hits for every query
     in both iterations, while OpenAlex and Crossref returned 135 and 60 in
     the first. The literal, AND-combined matching suggests the
@@ -1033,10 +1035,11 @@ explicit, mutable state. In this setting the research plan is an output of
 the investigation as well as an input, the result of reading is structured
 evidence rather than prose, and everything that does not require judgement
 is deterministic code. This design makes the system auditable: every
-report sentence can be traced to a claim, every claim to a document, and
+citation in the report can be traced to a claim, every claim to a document, and
 every document to the queries and intents that found it. The same
 traceability made the weaknesses in our case study visible, including
-repeated snowball seeds, inflated intent yields and silent sources. We
+repeated snowball seeds, inflated intent yields and silent sources, the
+first two of which have since been fixed. We
 expect this property to be as useful when improving the system as when
 using it.
 
