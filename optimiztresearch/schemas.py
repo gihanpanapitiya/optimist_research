@@ -1,7 +1,7 @@
 """Structured-output schemas for the LLM nodes.
 
 These are the wire format between models and the research state, kept
-separate from :mod:`forestresearch.state` for two reasons:
+separate from :mod:`optimiztresearch.state` for two reasons:
 
 * State models carry derived fields and ids the model should not invent.
 * Portability. Providers differ in what JSON Schema they accept, so these

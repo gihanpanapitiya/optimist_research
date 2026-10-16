@@ -10,13 +10,13 @@ from __future__ import annotations
 
 import pytest
 
-from forestresearch.sources.arxiv import ArxivSource
-from forestresearch.sources.crossref import CrossrefSource, strip_jats
-from forestresearch.sources.openalex import OpenAlexSource, reconstruct_abstract
-from forestresearch.sources.pubmed import PubMedSource
-from forestresearch.sources.semantic_scholar import SemanticScholarSource
-from forestresearch.sources.web import WebSource
-from forestresearch.state import Document, QueryPlan
+from optimiztresearch.sources.arxiv import ArxivSource
+from optimiztresearch.sources.crossref import CrossrefSource, strip_jats
+from optimiztresearch.sources.openalex import OpenAlexSource, reconstruct_abstract
+from optimiztresearch.sources.pubmed import PubMedSource
+from optimiztresearch.sources.semantic_scholar import SemanticScholarSource
+from optimiztresearch.sources.web import WebSource
+from optimiztresearch.state import Document, QueryPlan
 
 
 @pytest.fixture
@@ -354,7 +354,7 @@ class TestFieldListRegressions:
     """
 
     def test_citation_endpoints_avoid_the_nested_author_field(self):
-        from forestresearch.sources.semantic_scholar import CITATION_FIELDS, PAPER_FIELDS
+        from optimiztresearch.sources.semantic_scholar import CITATION_FIELDS, PAPER_FIELDS
 
         # /paper/{id}/references and /citations 400 on "authors.name" with
         # "Unrecognized or unsupported fields", while /paper/search requires it.
@@ -363,7 +363,7 @@ class TestFieldListRegressions:
         assert "authors.name" in PAPER_FIELDS
 
     def test_crossref_select_omits_subtype(self):
-        from forestresearch.sources.crossref import SELECT_FIELDS
+        from optimiztresearch.sources.crossref import SELECT_FIELDS
 
         # Crossref rejects the whole /works request if any select field is
         # invalid, and "subtype" is not selectable on that route.
@@ -606,7 +606,7 @@ class TestRateLimitHandling:
 
         import httpx
 
-        from forestresearch.sources import base
+        from optimiztresearch.sources import base
 
         script: list[int] = []
         seen: list[str] = []
@@ -685,7 +685,7 @@ class TestRateLimitHandling:
         assert source.failures == {}
 
     async def test_search_round_reports_failed_requests(self, monkeypatch):
-        from forestresearch.nodes import search
+        from optimiztresearch.nodes import search
 
         class FailingSource(ArxivSource):
             async def search(self, plan):

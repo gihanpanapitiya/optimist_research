@@ -6,7 +6,7 @@ directions, so it can snowball when Semantic Scholar is throttled or has no
 record of a paper.
 
 Supplying a contact email puts requests in the polite pool with far better
-rate limits; do set ``FORESTRESEARCH_CONTACT_EMAIL``.
+rate limits; do set ``OPTIMIZTRESEARCH_CONTACT_EMAIL``.
 """
 
 from __future__ import annotations
@@ -297,7 +297,7 @@ class OpenAlexSource(SearchSource):
         """Fetch full OpenAlex records for ``dois``, batched.
 
         Exposed so another adapter can enrich bare DOIs it discovered -- see
-        :mod:`forestresearch.sources.hydrate`. Returns a mapping keyed by
+        :mod:`optimiztresearch.sources.hydrate`. Returns a mapping keyed by
         normalized DOI; DOIs OpenAlex does not know are simply absent.
         """
         found: dict[str, dict] = {}

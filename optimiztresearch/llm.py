@@ -61,7 +61,7 @@ def get_model(role: str) -> BaseChatModel:
         raise RuntimeError(
             f"Role {role!r} is configured for provider {provider!r} but its "
             f"integration package is missing. Install it, e.g. "
-            f"`pip install 'forestresearch[{provider}]'`."
+            f"`pip install 'optimiztresearch[{provider}]'`."
         ) from exc
 
 

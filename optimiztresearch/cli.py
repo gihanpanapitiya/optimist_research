@@ -1,8 +1,8 @@
 """Command-line interface.
 
-    forestresearch run "What are the recent developments in planning for AI agents?"
-    forestresearch sources
-    forestresearch config
+    optimiztresearch run "What are the recent developments in planning for AI agents?"
+    optimiztresearch sources
+    optimiztresearch config
 """
 
 from __future__ import annotations
@@ -47,7 +47,7 @@ def run(
         "", "--scope", "-s", help="Extra scope notes or constraints for the planner."
     ),
     output: str = typer.Option(
-        None, "--output", "-o", help="Output directory (default: FORESTRESEARCH_OUTPUT_DIR)."
+        None, "--output", "-o", help="Output directory (default: OPTIMIZTRESEARCH_OUTPUT_DIR)."
     ),
     sources: str = typer.Option(
         None,
@@ -79,7 +79,7 @@ def run(
 
     # CLI flags win over the environment, so apply them before settings load.
     if sources:
-        os.environ["FORESTRESEARCH_ENABLED_SOURCES"] = sources
+        os.environ["OPTIMIZTRESEARCH_ENABLED_SOURCES"] = sources
     if semantic_scholar:
         choice = semantic_scholar.strip().lower()
         if choice not in ("auto", "on", "off"):
@@ -87,15 +87,15 @@ def run(
                 f"[red]--semantic-scholar must be auto, on or off[/red] (got {choice!r})"
             )
             raise typer.Exit(2)
-        os.environ["FORESTRESEARCH_SEMANTIC_SCHOLAR"] = choice
+        os.environ["OPTIMIZTRESEARCH_SEMANTIC_SCHOLAR"] = choice
     if max_documents is not None:
-        os.environ["FORESTRESEARCH_BUDGET__MAX_DOCUMENTS_READ"] = str(max_documents)
+        os.environ["OPTIMIZTRESEARCH_BUDGET__MAX_DOCUMENTS_READ"] = str(max_documents)
     if max_iterations is not None:
-        os.environ["FORESTRESEARCH_BUDGET__MAX_RESEARCH_ITERATIONS"] = str(max_iterations)
+        os.environ["OPTIMIZTRESEARCH_BUDGET__MAX_RESEARCH_ITERATIONS"] = str(max_iterations)
     if full_text:
-        os.environ["FORESTRESEARCH_READ_FULL_TEXT"] = "true"
+        os.environ["OPTIMIZTRESEARCH_READ_FULL_TEXT"] = "true"
     if output:
-        os.environ["FORESTRESEARCH_OUTPUT_DIR"] = output
+        os.environ["OPTIMIZTRESEARCH_OUTPUT_DIR"] = output
 
     settings = get_settings(refresh=True)
 
@@ -103,7 +103,7 @@ def run(
     if not available:
         console.print(
             "[red]No literature sources are available.[/red] Check "
-            "FORESTRESEARCH_ENABLED_SOURCES and required API keys."
+            "OPTIMIZTRESEARCH_ENABLED_SOURCES and required API keys."
         )
         raise typer.Exit(1)
 
@@ -224,7 +224,7 @@ def sources() -> None:
 
     if not settings.contact_email:
         console.print(
-            "\n[yellow]No FORESTRESEARCH_CONTACT_EMAIL set.[/yellow] Setting one puts "
+            "\n[yellow]No OPTIMIZTRESEARCH_CONTACT_EMAIL set.[/yellow] Setting one puts "
             "OpenAlex, Crossref and PubMed requests in their polite pools, which "
             "have far better rate limits."
         )
@@ -237,15 +237,15 @@ def config() -> None:
     settings = get_settings(refresh=True)
 
     console.print("[bold]Configuration layers[/bold] (lowest precedence first)")
-    console.print("  1. defaults in forestresearch/config.py")
+    console.print("  1. defaults in optimiztresearch/config.py")
     yaml_files = settings.config_files
     if yaml_files:
         for path in yaml_files:
             console.print(f"  2. [green]{path}[/green]")
     else:
         console.print(
-            "  2. [dim]no forestresearch.yaml found[/dim] "
-            "(create one beside the project, or set FORESTRESEARCH_CONFIG_FILE)"
+            "  2. [dim]no optimiztresearch.yaml found[/dim] "
+            "(create one beside the project, or set OPTIMIZTRESEARCH_CONFIG_FILE)"
         )
     env_files = settings.env_files
     if env_files:
@@ -253,14 +253,14 @@ def config() -> None:
             console.print(f"  3. [green]{path}[/green] (secrets and local overrides)")
     else:
         console.print("  3. [dim]no .env found[/dim]")
-    overrides = sorted(k for k in os.environ if k.startswith("FORESTRESEARCH_"))
+    overrides = sorted(k for k in os.environ if k.startswith("OPTIMIZTRESEARCH_"))
     if overrides:
         console.print(
             f"  4. [yellow]environment: {', '.join(overrides)}[/yellow] "
             "(overrides the files above)"
         )
     else:
-        console.print("  4. [dim]no FORESTRESEARCH_* environment overrides[/dim]")
+        console.print("  4. [dim]no OPTIMIZTRESEARCH_* environment overrides[/dim]")
     console.print()
 
     table = Table("setting", "value")

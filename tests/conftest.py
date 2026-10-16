@@ -12,8 +12,8 @@ import os
 
 import pytest
 
-from forestresearch.config import Settings, get_settings
-from forestresearch.schemas import (
+from optimiztresearch.config import Settings, get_settings
+from optimiztresearch.schemas import (
     CoverageScore,
     CritiqueOutput,
     ExtractedEvidence,
@@ -31,18 +31,18 @@ from forestresearch.schemas import (
     SubquestionScore,
     SubquestionSynthesisOutput,
 )
-from forestresearch.sources.base import SearchSource
-from forestresearch.state import Document, Provenance, QueryPlan, RawHit
+from optimiztresearch.sources.base import SearchSource
+from optimiztresearch.state import Document, Provenance, QueryPlan, RawHit
 
 
 @pytest.fixture(autouse=True)
 def isolate_settings(monkeypatch):
     """Keep the developer's local configuration out of the tests.
 
-    Settings resolve from ``forestresearch.yaml``, ``.env`` and ``FORESTRESEARCH_*``
+    Settings resolve from ``optimiztresearch.yaml``, ``.env`` and ``OPTIMIZTRESEARCH_*``
     on instantiation, so without this a local file silently changes test
     outcomes. Both layers have done exactly that: first a ``.env`` lowering a
-    budget ceiling, then the ``forestresearch.yaml`` that replaced it, each
+    budget ceiling, then the ``optimiztresearch.yaml`` that replaced it, each
     failing a snowball saturation test for reasons unrelated to the code
     under test.
 
@@ -50,9 +50,9 @@ def isolate_settings(monkeypatch):
     """
     monkeypatch.setitem(Settings.model_config, "env_file", None)
     monkeypatch.setitem(Settings.model_config, "yaml_file", ())
-    monkeypatch.delenv("FORESTRESEARCH_CONFIG_FILE", raising=False)
+    monkeypatch.delenv("OPTIMIZTRESEARCH_CONFIG_FILE", raising=False)
     for key in list(os.environ):
-        if key.startswith("FORESTRESEARCH_"):
+        if key.startswith("OPTIMIZTRESEARCH_"):
             monkeypatch.delenv(key, raising=False)
     get_settings(refresh=True)
     yield
@@ -388,29 +388,29 @@ def wired(monkeypatch, fake_model, fake_source, tmp_path):
     Node modules bind ``active_sources`` and ``get_model`` at import time, so
     each binding is patched where it is used rather than at the definition.
     """
-    monkeypatch.setenv("FORESTRESEARCH_OUTPUT_DIR", str(tmp_path / "research"))
-    monkeypatch.setenv("FORESTRESEARCH_ENABLED_SOURCES", "arxiv")
-    monkeypatch.setenv("FORESTRESEARCH_READ_FULL_TEXT", "false")
+    monkeypatch.setenv("OPTIMIZTRESEARCH_OUTPUT_DIR", str(tmp_path / "research"))
+    monkeypatch.setenv("OPTIMIZTRESEARCH_ENABLED_SOURCES", "arxiv")
+    monkeypatch.setenv("OPTIMIZTRESEARCH_READ_FULL_TEXT", "false")
     get_settings(refresh=True)
 
     def structured(role: str, schema: type):
         return FakeStructuredRunnable(fake_model, schema)
 
-    monkeypatch.setattr("forestresearch.llm.structured", structured)
+    monkeypatch.setattr("optimiztresearch.llm.structured", structured)
     monkeypatch.setattr(
-        "forestresearch.nodes.report.get_model", lambda role: FakeChatModel(fake_model)
+        "optimiztresearch.nodes.report.get_model", lambda role: FakeChatModel(fake_model)
     )
 
     sources = {"fake": fake_source}
     for module in (
-        "forestresearch.nodes.planner",
-        "forestresearch.nodes.intents",
-        "forestresearch.nodes.queries",
-        "forestresearch.nodes.search",
+        "optimiztresearch.nodes.planner",
+        "optimiztresearch.nodes.intents",
+        "optimiztresearch.nodes.queries",
+        "optimiztresearch.nodes.search",
     ):
         monkeypatch.setattr(f"{module}.active_sources", lambda: sources)
     monkeypatch.setattr(
-        "forestresearch.nodes.snowball.snowball_sources", lambda direction: [fake_source]
+        "optimiztresearch.nodes.snowball.snowball_sources", lambda direction: [fake_source]
     )
 
     yield fake_model

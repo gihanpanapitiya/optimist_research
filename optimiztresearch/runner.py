@@ -1,6 +1,6 @@
 """Run the research graph and persist the corpus.
 
-This is the programmatic entry point. ``forestresearch.cli`` wraps it for the
+This is the programmatic entry point. ``optimiztresearch.cli`` wraps it for the
 terminal; an orchestrating agent delegating a literature task would call
 :func:`run_research` directly.
 """

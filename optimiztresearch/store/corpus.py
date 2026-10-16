@@ -79,7 +79,7 @@ class ResearchCorpus:
                     f"current working directory, {Path.cwd()}. Pass an absolute "
                     f"path instead, e.g. "
                     f'run_research(..., output_dir="{PROJECT_ROOT / "research"}"), '
-                    f"or set FORESTRESEARCH_OUTPUT_DIR."
+                    f"or set OPTIMIZTRESEARCH_OUTPUT_DIR."
                 ) from exc
 
     # -- state round-trip --------------------------------------------------

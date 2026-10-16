@@ -1,18 +1,18 @@
-# forestresearch configuration.
+# optimiztresearch configuration.
 #
 # Commit this file. Keep API keys out of it -- those belong in .env, which is
 # gitignored. Precedence, lowest first:
 #
-#   defaults in forestresearch/config.py  <  this file  <  .env  <  environment
+#   defaults in optimiztresearch/config.py  <  this file  <  .env  <  environment
 #   variables  <  CLI flags
 #
 # So a committed setting here can always be overridden for one run:
-#   forestresearch run "..." --max-documents 20
-#   FORESTRESEARCH_BUDGET__MAX_DOCUMENTS_READ=20 forestresearch run "..."
+#   optimiztresearch run "..." --max-documents 20
+#   OPTIMIZTRESEARCH_BUDGET__MAX_DOCUMENTS_READ=20 optimiztresearch run "..."
 #
 # Files nearer the working directory win over ones further up, merged key by
-# key -- so a forestresearch.yaml in a subdirectory can change one budget value
-# without restating the rest. `forestresearch config` prints what is in effect
+# key -- so a optimiztresearch.yaml in a subdirectory can change one budget value
+# without restating the rest. `optimiztresearch config` prints what is in effect
 # and which files it came from.
 
 # ---------------------------------------------------------------------------
