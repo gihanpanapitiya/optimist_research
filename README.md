@@ -473,6 +473,26 @@ APIs reject an entire request rather than ignoring one bad field, so a single
 wrong field name costs a whole source while every offline test still passes —
 which is exactly how three real bugs in these adapters were found.
 
+## Citation
+
+If you use Optimist Deep Research in your work, please cite the repository:
+
+```bibtex
+@software{panapitiya2026optimist,
+  author  = {Panapitiya, Gihan},
+  title   = {Optimist Deep Research},
+  year    = {2026},
+  version = {0.1.0},
+  license = {Apache-2.0},
+  url     = {https://github.com/gihanpanapitiya/optimist_research}
+}
+```
+
+The same metadata is in [`CITATION.cff`](CITATION.cff), so GitHub's
+**Cite this repository** button (in the sidebar) gives APA and BibTeX
+versions. A paper describing the system is in preparation; this section will
+be updated with its citation once it is available.
+
 ## Disclaimer
 
 Optimist Deep Research is a research aid, not a source of truth. Its reports
