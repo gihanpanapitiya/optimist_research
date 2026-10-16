@@ -1,4 +1,4 @@
-# Optimizt Deep Research (`optimiztresearch`)
+# Optimist Deep Research (`optimistresearch`)
 
 An iterative deep-research agent for autonomous literature research, built on
 LangGraph. It implements the methodology in [`plan.md`](plan.md): rather than
@@ -7,7 +7,7 @@ as an **iterative evidence-acquisition process** over an explicit, mutable
 research state.
 
 ```
-optimiztresearch run "What are the recent developments in planning for AI agents?"
+optimistresearch run "What are the recent developments in planning for AI agents?"
 ```
 
 ## What it does
@@ -43,14 +43,14 @@ cp .env.example .env                   # then edit
 ```
 
 Set at minimum an API key for your model provider, and
-`OPTIMIZTRESEARCH_CONTACT_EMAIL` — it puts OpenAlex, Crossref and PubMed requests in
+`OPTIMISTRESEARCH_CONTACT_EMAIL` — it puts OpenAlex, Crossref and PubMed requests in
 their polite pools, which have far better rate limits. Everything else is
 optional: with no literature-source keys at all, arXiv, OpenAlex, Crossref and
 PubMed all work, and OpenAlex supplies the citation graph.
 
 ```bash
-optimiztresearch sources    # which sources are configured and usable
-optimiztresearch config     # effective configuration
+optimistresearch sources    # which sources are configured and usable
+optimistresearch config     # effective configuration
 ```
 
 ## Sources
@@ -78,9 +78,9 @@ query-generation calls and search budget to return nothing. Leaving it off is
 strictly better than leaving it on without a key.
 
 ```bash
-optimiztresearch sources                              # shows the resolved decision
-optimiztresearch run "..." --semantic-scholar on       # try the unkeyed pool anyway
-optimiztresearch run "..." --semantic-scholar off      # skip it even with a key
+optimistresearch sources                              # shows the resolved decision
+optimistresearch run "..." --semantic-scholar on       # try the unkeyed pool anyway
+optimistresearch run "..." --semantic-scholar off      # skip it even with a key
 ```
 
 **Without a key, OpenAlex carries the citation graph.** It covers both
@@ -200,7 +200,7 @@ once.
 
 | Path | Role |
 | --- | --- |
-| `optimiztresearch.yaml` | The settings you edit; `.env` holds only secrets |
+| `optimistresearch.yaml` | The settings you edit; `.env` holds only secrets |
 | `state.py` | The research state and its LangGraph reducers — the spine |
 | `schemas.py` | Structured-output schemas for the LLM nodes |
 | `config.py` | Budgets, ranking weights, per-role model routing |
@@ -244,7 +244,7 @@ a usable partial corpus.
 
 ## Configuration
 
-Settings live in **`optimiztresearch.yaml`**, which is the file to commit. Secrets
+Settings live in **`optimistresearch.yaml`**, which is the file to commit. Secrets
 stay in `.env`, which is gitignored.
 
 ```yaml
@@ -276,24 +276,24 @@ mixed across roles.
 
 Lowest first, so a committed file can always be overridden for one run:
 
-1. defaults in `optimiztresearch/config.py`
-2. `optimiztresearch.yaml`
+1. defaults in `optimistresearch/config.py`
+2. `optimistresearch.yaml`
 3. `.env` — API keys, and machine-local overrides
 4. environment variables, including those the CLI sets from its flags
 
 ```bash
-optimiztresearch config                            # what is in effect, and from which files
-optimiztresearch run "..." --max-documents 20      # beats the committed YAML
-OPTIMIZTRESEARCH_BUDGET__MAX_DOCUMENTS_READ=20 ... # the same, as an env var
+optimistresearch config                            # what is in effect, and from which files
+optimistresearch run "..." --max-documents 20      # beats the committed YAML
+OPTIMISTRESEARCH_BUDGET__MAX_DOCUMENTS_READ=20 ... # the same, as an env var
 ```
 
 Both files are found by walking up from the working directory and then falling
 back to the project root, nearest winning — so a notebook started anywhere
 still finds the configuration. YAML files merge **key by key**, so a
-`optimiztresearch.yaml` in a subdirectory can change one budget value without
-restating the block. `OPTIMIZTRESEARCH_CONFIG_FILE` pins an explicit file.
+`optimistresearch.yaml` in a subdirectory can change one budget value without
+restating the block. `OPTIMISTRESEARCH_CONFIG_FILE` pins an explicit file.
 
-Environment variables still work for everything (`OPTIMIZTRESEARCH_` prefix, `__`
+Environment variables still work for everything (`OPTIMISTRESEARCH_` prefix, `__`
 for nesting) and are the right tool for a single override. They are a poor
 tool for a whole configuration: a key repeated in a `.env` silently takes its
 last value, which is how an edit meant to raise a concurrency limit left it at
@@ -310,7 +310,7 @@ pip install -e '.[ollama]'
 ```
 
 ```yaml
-# optimiztresearch.yaml -- point every role at the SAME model
+# optimistresearch.yaml -- point every role at the SAME model
 models:
   planner: ollama:gemma4:latest
   intent: ollama:gemma4:latest
@@ -390,10 +390,10 @@ Budget ceilings are limits, not targets — the critic may stop well before any
 is reached:
 
 ```bash
-OPTIMIZTRESEARCH_BUDGET__MAX_DOCUMENTS_READ=100
-OPTIMIZTRESEARCH_BUDGET__MAX_SEARCH_OPERATIONS=60
-OPTIMIZTRESEARCH_BUDGET__MAX_SNOWBALL_ROUNDS=3
-OPTIMIZTRESEARCH_BUDGET__MAX_RESEARCH_ITERATIONS=4
+OPTIMISTRESEARCH_BUDGET__MAX_DOCUMENTS_READ=100
+OPTIMISTRESEARCH_BUDGET__MAX_SEARCH_OPERATIONS=60
+OPTIMISTRESEARCH_BUDGET__MAX_SNOWBALL_ROUNDS=3
+OPTIMISTRESEARCH_BUDGET__MAX_RESEARCH_ITERATIONS=4
 ```
 
 Number of papers retrieved is deliberately *not* a stopping criterion.
@@ -408,13 +408,13 @@ text, so `location` fields point at real sections.
 
 ```bash
 pip install -e '.[pdf]'
-optimiztresearch run "..." --full-text
+optimistresearch run "..." --full-text
 ```
 
 ## Programmatic use
 
 ```python
-from optimiztresearch.runner import run_research, summarize_run
+from optimistresearch.runner import run_research, summarize_run
 
 state = await run_research(
     "How do LLM agents recover from planning failures?",
@@ -450,7 +450,7 @@ reconciliation left to the synthesizer. A concept-graph layer would slot in at
 ```bash
 pip install -e '.[anthropic,dev,pdf]'
 pytest                              # 250 tests, fully offline
-ruff check optimiztresearch tests scripts
+ruff check optimistresearch tests scripts
 python scripts/smoke_sources.py     # live source check, makes real requests
 python scripts/check_models.py openai:gpt-5.4-mini   # can a model cope?
 ```
@@ -472,3 +472,30 @@ Run `scripts/smoke_sources.py` after touching a source adapter. The scholarly
 APIs reject an entire request rather than ignoring one bad field, so a single
 wrong field name costs a whole source while every offline test still passes —
 which is exactly how three real bugs in these adapters were found.
+
+## Disclaimer
+
+Optimist Deep Research is a research aid, not a source of truth. Its reports
+are generated by language models and can contain errors: misread or
+misattributed claims, citations that do not support the sentence they are
+attached to, and gaps in coverage when relevant work was not retrieved or not
+read. Check every claim against the cited sources before relying on it. The
+reports are not professional, medical, legal or financial advice.
+
+You are responsible for how you use the software and its output, including
+complying with the terms of service and rate limits of the APIs it calls
+(OpenAlex, Crossref, PubMed, arXiv, Semantic Scholar, web search providers
+and LLM providers) and with the copyright and licensing terms of any full
+text it retrieves.
+
+The software is provided "as is", without warranty of any kind, and the
+authors accept no liability for any consequences of its use. See sections 7
+and 8 of the [license](LICENSE).
+
+## License
+
+Copyright 2026 Gihan Panapitiya.
+
+Licensed under the [Apache License, Version 2.0](LICENSE). "Optimist" and
+"Optimist Deep Research" are names of this project; the license does not grant
+permission to use them, beyond describing where the work came from (section 6).

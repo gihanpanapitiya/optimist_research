@@ -7,8 +7,8 @@ several times.
 
 from __future__ import annotations
 
-from optimiztresearch.state import Provenance, RawHit, normalize_arxiv_id, normalize_doi
-from optimiztresearch.store.canonicalize import Canonicalizer
+from optimistresearch.state import Provenance, RawHit, normalize_arxiv_id, normalize_doi
+from optimistresearch.store.canonicalize import Canonicalizer
 
 
 def hit(
@@ -309,7 +309,7 @@ class TestNumericSignature:
     """Numerals in titles distinguish works that are otherwise near-identical."""
 
     def test_model_generations_do_not_merge(self):
-        from optimiztresearch.store.canonicalize import numeric_signature
+        from optimistresearch.store.canonicalize import numeric_signature
 
         canon = Canonicalizer({})
         result = canon.ingest(

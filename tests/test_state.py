@@ -7,7 +7,7 @@ same result, and nothing a branch wrote may be lost.
 
 from __future__ import annotations
 
-from optimiztresearch.state import (
+from optimistresearch.state import (
     BudgetUsage,
     Contradiction,
     Document,
@@ -238,7 +238,7 @@ class TestRegressions:
 
     def test_snowball_hit_does_not_default_to_depth_zero(self):
         """Depth 0 means "found by direct search" and must not be claimed."""
-        from optimiztresearch.state import UNKNOWN_SNOWBALL_DEPTH, Document, RawHit
+        from optimistresearch.state import UNKNOWN_SNOWBALL_DEPTH, Document, RawHit
 
         hit = RawHit(
             source="semantic_scholar",
@@ -263,7 +263,7 @@ class TestRegressions:
         assert Document.from_hit(searched, "doc_0003").snowball_depth == 0
 
     def test_rediscovering_a_snowball_document_keeps_its_depth(self):
-        from optimiztresearch.state import UNKNOWN_SNOWBALL_DEPTH
+        from optimistresearch.state import UNKNOWN_SNOWBALL_DEPTH
 
         established = doc("doc_0001", snowball_depth=2)
         rediscovered = doc("doc_0001", snowball_depth=UNKNOWN_SNOWBALL_DEPTH)

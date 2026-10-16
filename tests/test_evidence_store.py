@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import datetime
 
-from optimiztresearch.state import Document, Evidence
-from optimiztresearch.store.evidence import (
+from optimistresearch.state import Document, Evidence
+from optimistresearch.store.evidence import (
     cluster_claims,
     diversity_report,
     group_by_subquestion,

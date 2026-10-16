@@ -77,7 +77,7 @@
 \fancyhf{}
 \renewcommand{\headrulewidth}{0pt}
 \renewcommand{\sectionmark}[1]{\markboth{#1}{}}
-\fancyhead[L]{\hfont\scriptsize\color{muted}\textbf{\color{accent}Optimizt}\quad Iterative literature research agent}
+\fancyhead[L]{\hfont\scriptsize\color{muted}\textbf{\color{accent}ODR}\quad Iterative literature research agent}
 \fancyhead[R]{\hfont\scriptsize\color{muted}\leftmark}
 \fancyfoot[C]{\hfont\footnotesize\color{muted}\thepage}
 \fancypagestyle{plain}{\fancyhf{}\fancyfoot[C]{\hfont\footnotesize\color{muted}\thepage}}
@@ -92,8 +92,8 @@
 \setlist[enumerate]{label={\hfont\bfseries\color{accent}\arabic*}}
 
 \newcommand{\code}[1]{\texttt{#1}}
-\newcommand{\sys}{{\hfont\bfseries Optimizt}}
-\newcommand{\sysfull}{{\hfont\bfseries Optimizt Deep Research}}
+\newcommand{\sys}{{\hfont\bfseries ODR}}
+\newcommand{\sysfull}{{\hfont\bfseries Optimist Deep Research}}
 
 % ================================================================ tables
 \setlength{\aboverulesep}{0pt}
@@ -138,7 +138,7 @@
 {\hfont\footnotesize\bfseries\color{accent}TECHNICAL REPORT\hspace{0.8em}{\color{hairline}|}\hspace{0.8em}{\color{muted}OCTOBER 2026}}
 
 \vspace{1.0em}
-{\hfont\fontsize{30}{34}\selectfont\bfseries\color{ink}Optimizt Deep Research}
+{\hfont\fontsize{30}{34}\selectfont\bfseries\color{ink}Optimist Deep Research}
 
 \vspace{0.45em}
 {\hfont\Large\color{muted}An iterative, state-centric agent for autonomous literature research}
@@ -883,7 +883,7 @@ run leaves a usable partial corpus.
 provider-agnostic \code{init\_chat\_model}, Pydantic and httpx, with
 Anthropic, OpenAI, Google and Ollama back-ends available as optional
 extras. Configuration has four layers, lowest priority first: code
-defaults, a committed \code{optimiztresearch.yaml} (merged key by key along the
+defaults, a committed \code{optimistresearch.yaml} (merged key by key along the
 directory path), \code{.env} for secrets, and environment variables, which
 the CLI's flags also set.
 

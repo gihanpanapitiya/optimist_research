@@ -55,7 +55,7 @@ def active_sources() -> dict[str, SearchSource]:
         active[name] = get_source(name)
     if not active:
         raise RuntimeError(
-            "No literature sources are available. Check OPTIMIZTRESEARCH_ENABLED_SOURCES "
+            "No literature sources are available. Check OPTIMISTRESEARCH_ENABLED_SOURCES "
             "and any required API keys."
         )
     return active

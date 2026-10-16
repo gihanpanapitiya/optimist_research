@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from optimiztresearch.state import (
+from optimistresearch.state import (
     BudgetUsage,
     Contradiction,
     Critique,
@@ -15,7 +15,7 @@ from optimiztresearch.state import (
     Subquestion,
     new_state,
 )
-from optimiztresearch.store.corpus import ResearchCorpus, slugify
+from optimistresearch.store.corpus import ResearchCorpus, slugify
 
 
 def sample_state():
@@ -248,12 +248,12 @@ class TestEnvDiscovery:
     """Configuration must be findable from outside the project directory."""
 
     def test_the_project_env_is_a_candidate(self):
-        from optimiztresearch.config import PROJECT_ROOT, _env_files
+        from optimistresearch.config import PROJECT_ROOT, _env_files
 
         assert PROJECT_ROOT / ".env" in _env_files()
 
     def test_nearer_env_files_take_precedence(self, tmp_path, monkeypatch):
-        from optimiztresearch.config import PROJECT_ROOT, _env_files
+        from optimistresearch.config import PROJECT_ROOT, _env_files
 
         monkeypatch.chdir(tmp_path)
         files = _env_files()
@@ -264,7 +264,7 @@ class TestEnvDiscovery:
 
     def test_candidates_are_unique(self, monkeypatch):
         """The project root is also an ancestor of the cwd when run in-tree."""
-        from optimiztresearch.config import PROJECT_ROOT, _env_files
+        from optimistresearch.config import PROJECT_ROOT, _env_files
 
         monkeypatch.chdir(PROJECT_ROOT)
         files = _env_files()

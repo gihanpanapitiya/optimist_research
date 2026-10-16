@@ -52,8 +52,8 @@
 % ================================================================ macros
 \newcommand{\hfont}{\sffamily}
 \newcommand{\code}[1]{\texttt{#1}}
-\newcommand{\sys}{\textsc{Optimizt}}
-\newcommand{\sysfull}{\textsc{Optimizt} Deep Research}
+\newcommand{\sys}{ODR}
+\newcommand{\sysfull}{Optimist Deep Research}
 
 \captionsetup{font=small,labelfont=bf}
 \captionsetup[table]{position=top,skip=6pt}
@@ -81,21 +81,21 @@
 \SetAlFnt{\small}
 
 % ================================================================ title
-\title{Optimizt Deep Research: An Iterative, State-Centric Agent for Autonomous Literature Research}
+\title{Optimist Deep Research: An Iterative, State-Centric Agent for Autonomous Literature Research}
 
 \author{
   Gihan Panapitiya \\
-  \texttt{gihanuthpala@gmail.com} \\
+  % \texttt{gihanuthpala@gmail.com} \\
 }
 
 \date{October 2026}
 
 \renewcommand{\headeright}{Technical Report}
 \renewcommand{\undertitle}{Technical Report}
-\renewcommand{\shorttitle}{Optimizt Deep Research}
+\renewcommand{\shorttitle}{Optimist Deep Research}
 
 \hypersetup{
-  pdftitle={Optimizt Deep Research: An Iterative, State-Centric Agent for Autonomous Literature Research},
+  pdftitle={Optimist Deep Research: An Iterative, State-Centric Agent for Autonomous Literature Research},
   pdfauthor={Gihan Panapitiya},
   pdfkeywords={LLM agents, literature review automation, retrieval-augmented generation, citation snowballing, evidence synthesis, LangGraph},
 }
@@ -832,7 +832,7 @@ run leaves a usable partial corpus.
 provider-agnostic \code{init\_chat\_model}, Pydantic and httpx, with
 Anthropic, OpenAI, Google and Ollama back-ends available as optional
 extras. Configuration has four layers, lowest priority first: code
-defaults, a committed \code{optimiztresearch.yaml} (merged key by key along the
+defaults, a committed \code{optimistresearch.yaml} (merged key by key along the
 directory path), \code{.env} for secrets, and environment variables, which
 the CLI's flags also set.
 

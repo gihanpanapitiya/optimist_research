@@ -1,7 +1,7 @@
 """Research planning: decompose the main question into subquestions.
 
 Runs once at the start. Thereafter the plan is mutated by the critic
-(:mod:`optimiztresearch.nodes.critic`), because the methodology treats the initial
+(:mod:`optimistresearch.nodes.critic`), because the methodology treats the initial
 tree as a starting hypothesis rather than an authority.
 """
 

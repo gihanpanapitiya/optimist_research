@@ -4,7 +4,7 @@ Every tunable is a field here, so the graph nodes stay free of magic numbers.
 Values resolve from four layers, lowest precedence first:
 
 1. the defaults in this module;
-2. ``optimiztresearch.yaml`` -- the readable place for nested config such as model
+2. ``optimistresearch.yaml`` -- the readable place for nested config such as model
    routing and budgets, and the one to commit;
 3. ``.env`` -- for API keys and machine-local overrides, which should not be
    committed;
@@ -15,8 +15,8 @@ Both files are discovered by walking up from the working directory and then
 falling back to the project root, with the nearest winning. YAML sits below
 the environment on purpose: commit the file, override it per run.
 
-Environment variables use the ``OPTIMIZTRESEARCH_`` prefix and a double
-underscore for nesting (``OPTIMIZTRESEARCH_BUDGET__MAX_DOCUMENTS_READ=50``), which
+Environment variables use the ``OPTIMISTRESEARCH_`` prefix and a double
+underscore for nesting (``OPTIMISTRESEARCH_BUDGET__MAX_DOCUMENTS_READ=50``), which
 is serviceable for one override and miserable for a whole configuration --
 hence the YAML.
 """
@@ -35,7 +35,7 @@ from pydantic_settings import (
     YamlConfigSettingsSource,
 )
 
-CONFIG_FILENAMES = ("optimiztresearch.yaml", "optimiztresearch.yml")
+CONFIG_FILENAMES = ("optimistresearch.yaml", "optimistresearch.yml")
 """Recognized config filenames, in preference order within one directory."""
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -57,13 +57,13 @@ def _env_files() -> tuple[Path, ...]:
 
 
 def _config_files() -> tuple[Path, ...]:
-    """Candidate ``optimiztresearch.yaml`` files, lowest precedence first.
+    """Candidate ``optimistresearch.yaml`` files, lowest precedence first.
 
-    An explicit ``OPTIMIZTRESEARCH_CONFIG_FILE`` wins outright, which is how a
+    An explicit ``OPTIMISTRESEARCH_CONFIG_FILE`` wins outright, which is how a
     notebook or a CI job pins a configuration without depending on where it
     happens to be running.
     """
-    explicit = os.getenv("OPTIMIZTRESEARCH_CONFIG_FILE", "").strip()
+    explicit = os.getenv("OPTIMISTRESEARCH_CONFIG_FILE", "").strip()
     if explicit:
         return (Path(explicit).expanduser(),)
     found: list[Path] = []
@@ -206,7 +206,7 @@ class RankingWeights(BaseModel):
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="OPTIMIZTRESEARCH_",
+        env_prefix="OPTIMISTRESEARCH_",
         env_nested_delimiter="__",
         env_file=_env_files(),
         env_file_encoding="utf-8",
@@ -265,7 +265,7 @@ class Settings(BaseSettings):
     read_full_text: bool = False
     """When false, evidence extraction works from title/abstract/metadata only.
 
-    The full-text path is implemented (see ``optimiztresearch.fulltext``) but gated,
+    The full-text path is implemented (see ``optimistresearch.fulltext``) but gated,
     because PDF fetching and parsing dominates both latency and token spend
     while the graph logic is still being iterated on.
     """
@@ -340,7 +340,7 @@ class Settings(BaseSettings):
         """Why ``name`` is not usable, or None if it is.
 
         The single policy point for source availability: the registry, the
-        graph nodes and the `optimiztresearch sources` display all defer to this
+        graph nodes and the `optimistresearch sources` display all defer to this
         so they cannot disagree.
         """
         if name == "web" and not os.getenv("TAVILY_API_KEY"):
@@ -356,9 +356,9 @@ class Settings(BaseSettings):
 
     @property
     def user_agent(self) -> str:
-        base = "optimiztresearch/0.1 (https://github.com/; deep literature research agent)"
+        base = "optimistresearch/0.1 (https://github.com/; deep literature research agent)"
         if self.contact_email:
-            return f"optimiztresearch/0.1 (mailto:{self.contact_email})"
+            return f"optimistresearch/0.1 (mailto:{self.contact_email})"
         return base
 
     def available_sources(self) -> list[str]:

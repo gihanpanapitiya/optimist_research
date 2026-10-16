@@ -1,18 +1,18 @@
-# optimiztresearch configuration.
+# optimistresearch configuration.
 #
 # Commit this file. Keep API keys out of it -- those belong in .env, which is
 # gitignored. Precedence, lowest first:
 #
-#   defaults in optimiztresearch/config.py  <  this file  <  .env  <  environment
+#   defaults in optimistresearch/config.py  <  this file  <  .env  <  environment
 #   variables  <  CLI flags
 #
 # So a committed setting here can always be overridden for one run:
-#   optimiztresearch run "..." --max-documents 20
-#   OPTIMIZTRESEARCH_BUDGET__MAX_DOCUMENTS_READ=20 optimiztresearch run "..."
+#   optimistresearch run "..." --max-documents 20
+#   OPTIMISTRESEARCH_BUDGET__MAX_DOCUMENTS_READ=20 optimistresearch run "..."
 #
 # Files nearer the working directory win over ones further up, merged key by
-# key -- so a optimiztresearch.yaml in a subdirectory can change one budget value
-# without restating the rest. `optimiztresearch config` prints what is in effect
+# key -- so a optimistresearch.yaml in a subdirectory can change one budget value
+# without restating the rest. `optimistresearch config` prints what is in effect
 # and which files it came from.
 
 # ---------------------------------------------------------------------------

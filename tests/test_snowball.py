@@ -7,15 +7,15 @@ stops and which direction it picks.
 
 from __future__ import annotations
 
-from optimiztresearch.config import get_settings
-from optimiztresearch.nodes.snowball import (
+from optimistresearch.config import get_settings
+from optimistresearch.nodes.snowball import (
     _auto_seeds,
     _is_saturated,
     expand_snowball,
     plan_snowball,
     should_snowball,
 )
-from optimiztresearch.state import (
+from optimistresearch.state import (
     BudgetUsage,
     Document,
     Provenance,
@@ -96,7 +96,7 @@ class TestSaturation:
 
 class TestBudgetGates:
     def test_round_budget_stops_planning(self, monkeypatch):
-        monkeypatch.setenv("OPTIMIZTRESEARCH_BUDGET__MAX_SNOWBALL_ROUNDS", "2")
+        monkeypatch.setenv("OPTIMISTRESEARCH_BUDGET__MAX_SNOWBALL_ROUNDS", "2")
         get_settings(refresh=True)
         state = state_with(
             {"doc_0001": doc("doc_0001", 2024, {"RQ1": 0.9})},
@@ -110,7 +110,7 @@ class TestBudgetGates:
         assert "budget spent" in result["log"][0]
 
     def test_exhausted_read_budget_stops_planning(self, monkeypatch):
-        monkeypatch.setenv("OPTIMIZTRESEARCH_BUDGET__MAX_DOCUMENTS_READ", "5")
+        monkeypatch.setenv("OPTIMISTRESEARCH_BUDGET__MAX_DOCUMENTS_READ", "5")
         get_settings(refresh=True)
         state = state_with(
             {"doc_0001": doc("doc_0001", 2024, {"RQ1": 0.9})},
@@ -211,7 +211,7 @@ class TestBreadthLimits:
     """
 
     def test_seed_count_is_configurable(self, monkeypatch):
-        monkeypatch.setenv("OPTIMIZTRESEARCH_BUDGET__MAX_SNOWBALL_SEEDS", "2")
+        monkeypatch.setenv("OPTIMISTRESEARCH_BUDGET__MAX_SNOWBALL_SEEDS", "2")
         get_settings(refresh=True)
         documents = {
             f"doc_{i:04d}": doc(f"doc_{i:04d}", 2024, {f"RQ{i}": 0.9})
@@ -225,7 +225,7 @@ class TestBreadthLimits:
         assert len(plan_snowball(state)["snowball_seeds"]) <= 2
 
     def test_explicit_requests_are_also_capped(self, monkeypatch):
-        monkeypatch.setenv("OPTIMIZTRESEARCH_BUDGET__MAX_SNOWBALL_SEEDS", "1")
+        monkeypatch.setenv("OPTIMISTRESEARCH_BUDGET__MAX_SNOWBALL_SEEDS", "1")
         get_settings(refresh=True)
         documents = {
             "doc_0001": doc("doc_0001", 2024, {"RQ1": 0.9}),
@@ -241,9 +241,9 @@ class TestBreadthLimits:
         assert len(plan_snowball(state)["snowball_seeds"]) == 1
 
     async def test_edge_limit_is_passed_to_the_source(self, monkeypatch):
-        monkeypatch.setenv("OPTIMIZTRESEARCH_BUDGET__MAX_SNOWBALL_EDGES_PER_SEED", "7")
+        monkeypatch.setenv("OPTIMISTRESEARCH_BUDGET__MAX_SNOWBALL_EDGES_PER_SEED", "7")
         get_settings(refresh=True)
-        from optimiztresearch.nodes import snowball as snowball_module
+        from optimistresearch.nodes import snowball as snowball_module
 
         seen: list[int] = []
 
@@ -312,7 +312,7 @@ class TestExpandedSeedsAreNotRepeated:
 
     async def test_second_round_moves_on_to_new_seeds(self, monkeypatch):
         get_settings(refresh=True)
-        from optimiztresearch.nodes import snowball as snowball_module
+        from optimistresearch.nodes import snowball as snowball_module
 
         class NoEdges:
             name = "fake"

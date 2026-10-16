@@ -13,11 +13,11 @@ from __future__ import annotations
 
 import pytest
 
-from optimiztresearch.config import get_settings
-from optimiztresearch.sources.openalex import OpenAlexSource
-from optimiztresearch.sources.registry import reset_sources, snowball_sources
-from optimiztresearch.state import Document
-from optimiztresearch.store.canonicalize import title_is_prefix, titles_match
+from optimistresearch.config import get_settings
+from optimistresearch.sources.openalex import OpenAlexSource
+from optimistresearch.sources.registry import reset_sources, snowball_sources
+from optimistresearch.state import Document
+from optimistresearch.store.canonicalize import title_is_prefix, titles_match
 
 
 @pytest.fixture(autouse=True)
@@ -25,8 +25,8 @@ def clean_env(monkeypatch):
     """Pin the key-bearing env vars so these tests do not depend on the host."""
     monkeypatch.delenv("SEMANTIC_SCHOLAR_API_KEY", raising=False)
     monkeypatch.delenv("TAVILY_API_KEY", raising=False)
-    monkeypatch.delenv("OPTIMIZTRESEARCH_SEMANTIC_SCHOLAR", raising=False)
-    monkeypatch.setenv("OPTIMIZTRESEARCH_ENABLED_SOURCES", ",".join(
+    monkeypatch.delenv("OPTIMISTRESEARCH_SEMANTIC_SCHOLAR", raising=False)
+    monkeypatch.setenv("OPTIMISTRESEARCH_ENABLED_SOURCES", ",".join(
         ["arxiv", "semantic_scholar", "openalex", "crossref", "pubmed", "web"]
     ))
     reset_sources()
@@ -53,20 +53,20 @@ class TestSemanticScholarToggle:
         assert settings.source_unavailable_reason("semantic_scholar") is None
 
     def test_on_forces_it_without_a_key(self, monkeypatch):
-        monkeypatch.setenv("OPTIMIZTRESEARCH_SEMANTIC_SCHOLAR", "on")
+        monkeypatch.setenv("OPTIMISTRESEARCH_SEMANTIC_SCHOLAR", "on")
         settings = get_settings(refresh=True)
         assert settings.use_semantic_scholar is True
         assert "semantic_scholar" in settings.available_sources()
 
     def test_off_disables_it_despite_a_key(self, monkeypatch):
         monkeypatch.setenv("SEMANTIC_SCHOLAR_API_KEY", "sk-test")
-        monkeypatch.setenv("OPTIMIZTRESEARCH_SEMANTIC_SCHOLAR", "off")
+        monkeypatch.setenv("OPTIMISTRESEARCH_SEMANTIC_SCHOLAR", "off")
         settings = get_settings(refresh=True)
         assert settings.use_semantic_scholar is False
         assert "off" in settings.source_unavailable_reason("semantic_scholar")
 
     def test_the_source_object_agrees_with_the_policy(self, monkeypatch):
-        from optimiztresearch.sources.semantic_scholar import SemanticScholarSource
+        from optimistresearch.sources.semantic_scholar import SemanticScholarSource
 
         get_settings(refresh=True)
         assert SemanticScholarSource().is_available() is False
@@ -109,7 +109,7 @@ class TestCitationSourcePreference:
 
     def test_backward_survives_losing_openalex(self, monkeypatch):
         """Crossref alone can still supply reference lists."""
-        monkeypatch.setenv("OPTIMIZTRESEARCH_ENABLED_SOURCES", "arxiv,crossref")
+        monkeypatch.setenv("OPTIMISTRESEARCH_ENABLED_SOURCES", "arxiv,crossref")
         get_settings(refresh=True)
         assert [s.name for s in snowball_sources("backward")] == ["crossref"]
         assert snowball_sources("forward") == []
@@ -281,19 +281,19 @@ class TestUnicodeFolding:
     """
 
     def test_dash_variants_fold_together(self):
-        from optimiztresearch.store.canonicalize import surname
+        from optimistresearch.store.canonicalize import surname
 
         assert surname("Bernardino Romera‐Paredes") == surname(
             "Bernardino Romera-Paredes"
         )
 
     def test_accents_fold(self):
-        from optimiztresearch.store.canonicalize import surname
+        from optimistresearch.store.canonicalize import surname
 
         assert surname("Jürgen Müller") == surname("Jurgen Muller")
 
     def test_titles_fold_accents_and_dashes(self):
-        from optimiztresearch.state import normalize_title
+        from optimistresearch.state import normalize_title
 
         assert normalize_title("Schrödinger–Poisson Systems") == normalize_title(
             "Schrodinger-Poisson Systems"
@@ -311,7 +311,7 @@ class TestCrossrefReferenceParsing:
 
     @staticmethod
     def parse(entry: dict):
-        from optimiztresearch.sources.crossref import CrossrefSource
+        from optimistresearch.sources.crossref import CrossrefSource
 
         return CrossrefSource._parse_reference(entry)
 
@@ -369,7 +369,7 @@ class TestCrossrefReferenceParsing:
 class TestCrossrefBackwardGuards:
     async def test_an_arxiv_doi_makes_no_request(self, monkeypatch):
         """arXiv DOIs are registered with DataCite and carry no references."""
-        from optimiztresearch.sources.crossref import CrossrefSource
+        from optimistresearch.sources.crossref import CrossrefSource
 
         source = CrossrefSource()
 
@@ -381,7 +381,7 @@ class TestCrossrefBackwardGuards:
         assert await source.references(doc) == []
 
     async def test_no_doi_makes_no_request(self, monkeypatch):
-        from optimiztresearch.sources.crossref import CrossrefSource
+        from optimistresearch.sources.crossref import CrossrefSource
 
         source = CrossrefSource()
 
@@ -393,7 +393,7 @@ class TestCrossrefBackwardGuards:
 
     async def test_sparse_references_still_become_candidates(self, monkeypatch):
         """With hydration unavailable, titled entries survive as stubs."""
-        from optimiztresearch.sources import crossref as crossref_module
+        from optimistresearch.sources import crossref as crossref_module
 
         source = crossref_module.CrossrefSource()
 

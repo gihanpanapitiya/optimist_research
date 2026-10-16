@@ -10,16 +10,16 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from optimiztresearch.config import get_settings
-from optimiztresearch.graph import build_graph
-from optimiztresearch.runner import run_research, summarize_run
-from optimiztresearch.schemas import (
+from optimistresearch.config import get_settings
+from optimistresearch.graph import build_graph
+from optimistresearch.runner import run_research, summarize_run
+from optimistresearch.schemas import (
     CoverageScore,
     CritiqueOutput,
     ProposedPlanEdit,
     RecommendedIntent,
 )
-from optimiztresearch.state import new_state
+from optimistresearch.state import new_state
 
 QUESTION = "How do AI agents plan and recover from failures?"
 
@@ -216,7 +216,7 @@ class TestAdaptiveLoop:
         assert "no actionable next steps" in final["terminated_because"]
 
     async def test_iteration_limit_stops_a_persistent_critic(self, wired, monkeypatch):
-        monkeypatch.setenv("OPTIMIZTRESEARCH_BUDGET__MAX_RESEARCH_ITERATIONS", "2")
+        monkeypatch.setenv("OPTIMISTRESEARCH_BUDGET__MAX_RESEARCH_ITERATIONS", "2")
         get_settings(refresh=True)
         wired.critique_queue = [
             CritiqueOutput(
@@ -307,7 +307,7 @@ class TestPersistence:
         assert list((root / "sources").glob("doc_*/notes.md"))
 
     async def test_state_round_trips(self, wired, tmp_path):
-        from optimiztresearch.store.corpus import ResearchCorpus
+        from optimistresearch.store.corpus import ResearchCorpus
 
         state = await run_research(QUESTION)
         corpus = ResearchCorpus(get_settings().output_dir, QUESTION)
@@ -323,7 +323,7 @@ class TestPersistence:
         assert reloaded["subquestions"]["RQ1"].question
 
     async def test_saved_state_is_valid_json(self, wired):
-        from optimiztresearch.store.corpus import ResearchCorpus
+        from optimistresearch.store.corpus import ResearchCorpus
 
         await run_research(QUESTION)
         corpus = ResearchCorpus(get_settings().output_dir, QUESTION)
