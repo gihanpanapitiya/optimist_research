@@ -30,3 +30,10 @@ paper/*.fdb_latexmk
 paper/*.fls
 paper/*.log
 paper/*.out
+
+# Local notes, scripts and scratch notebooks (kept out of the repo)
+scripts/
+additional.md
+literature.md
+plan.md
+test.ipynb
