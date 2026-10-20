@@ -404,14 +404,19 @@ def load_env_files() -> None:
     this a script that has a perfectly good ``.env`` fails for want of a key.
 
     Variables already in the environment win, and a nearer file wins over a
-    farther one, matching how settings resolve.
+    farther one, matching how settings resolve. Empty values are skipped:
+    the ``.env`` that ``optimistresearch init`` writes lists every key blank,
+    and a blank ``OPENAI_API_KEY=`` must not hide a real one further up.
     """
-    from dotenv import load_dotenv
+    from dotenv import dotenv_values
 
     files = Settings.model_config.get("env_file") or ()
     if isinstance(files, (str, Path)):
         files = (files,)
-    # Nearest first: with override=False the first file to set a key keeps it.
+    # Nearest first, so the first file to set a key keeps it.
     for path in reversed(tuple(files)):
-        if Path(path).is_file():
-            load_dotenv(path, override=False)
+        if not Path(path).is_file():
+            continue
+        for key, value in dotenv_values(path).items():
+            if value and not os.environ.get(key):
+                os.environ[key] = value

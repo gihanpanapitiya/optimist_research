@@ -36,9 +36,29 @@ a specific retrieved document.
 ## Install
 
 ```bash
+pip install "optimistresearch[openai] @ git+https://github.com/gihanpanapitiya/optimist_research"
+optimistresearch init       # writes a starter optimistresearch.yaml and .env here
+```
+
+Pick the extras you need, comma-separated inside the brackets:
+
+| Extra | For |
+| --- | --- |
+| `openai`, `anthropic`, `google`, `ollama` | The model provider the YAML points at (the starter file uses `openai:gpt-4o-mini`) |
+| `pdf` | Full-text PDF reading |
+| `mcp` | The MCP server for coding agents |
+
+`optimistresearch.yaml` and `.env` are found by searching upwards from the
+working directory, so running `optimistresearch init ~` once gives every
+project under your home directory the same configuration; a file nearer a
+project overrides it.
+
+To work on the code, install from a checkout instead:
+
+```bash
+git clone https://github.com/gihanpanapitiya/optimist_research && cd optimist_research
 python3 -m venv .venv && source .venv/bin/activate
-pip install -e '.[anthropic]'          # or '.[openai]', '.[google]', '.[ollama]'
-pip install -e '.[anthropic,pdf]'      # add full-text PDF reading
+pip install -e '.[openai,dev]'
 cp .env.example .env                   # then edit
 ```
 
@@ -307,7 +327,7 @@ Supported, and it needs no API keys at all — neither for the models nor for
 arXiv, OpenAlex, Crossref and PubMed.
 
 ```bash
-pip install -e '.[ollama]'
+pip install "optimistresearch[ollama] @ git+https://github.com/gihanpanapitiya/optimist_research"
 ```
 
 ```yaml
@@ -390,7 +410,7 @@ experimental setups. `--full-text` fetches PDFs and extracts section-aware
 text, so `location` fields point at real sections.
 
 ```bash
-pip install -e '.[pdf]'
+pip install "optimistresearch[pdf] @ git+https://github.com/gihanpanapitiya/optimist_research"
 optimistresearch run "..." --full-text
 ```
 
@@ -467,18 +487,23 @@ Settings are process-wide, so run one research job per process at a time.
 server, so coding agents like Claude Code, Cursor or Codex can hand a
 literature question to Optimist Deep Research and read the report back.
 
-```bash
-pip install -e '.[mcp,anthropic]'
-claude mcp add optimistresearch -- optimistresearch-mcp
-```
-
-Or, without installing into the agent's environment, let `uv` run it from a
-checkout:
+With [`uv`](https://docs.astral.sh/uv/) installed, there is nothing to set up
+beforehand: `uvx` fetches and runs the server in its own environment.
 
 ```bash
 claude mcp add optimistresearch -- \
-  uv run --project /path/to/optimist_research --extra mcp --extra anthropic optimistresearch-mcp
+  uvx --from "optimistresearch[mcp,openai] @ git+https://github.com/gihanpanapitiya/optimist_research" optimistresearch-mcp
 ```
+
+Or install it with pip and register the command:
+
+```bash
+pip install "optimistresearch[mcp,openai] @ git+https://github.com/gihanpanapitiya/optimist_research"
+claude mcp add optimistresearch -- optimistresearch-mcp
+```
+
+From a checkout, `uv run --project /path/to/optimist_research --extra mcp
+--extra openai optimistresearch-mcp` runs your working copy.
 
 Other clients take the same command in their JSON config:
 
@@ -497,14 +522,19 @@ Other clients take the same command in their JSON config:
 }
 ```
 
-**API keys.** The server reads the same `.env` as the CLI: it searches upwards
-from the directory the agent starts it in, then the checkout the package was
-installed from with `pip install -e` or `uv run --project`. With a regular,
-non-editable install there is no checkout to fall back to, so pass the keys in
-the client's `env` block as above (with Claude Code, `claude mcp add -e
-OPENAI_API_KEY=... optimistresearch -- optimistresearch-mcp`). Model routing and
-budgets come from `optimistresearch.yaml`, found the same way, or from
-`OPTIMISTRESEARCH_CONFIG_FILE`.
+**API keys and config.** The server reads `.env` and `optimistresearch.yaml`
+the same way the CLI does, searching upwards from the directory the agent starts
+it in, which is your project. The simplest setup is to run `init` once in
+your home directory and fill in your key, so every project finds it:
+
+```bash
+uvx --from "optimistresearch @ git+https://github.com/gihanpanapitiya/optimist_research" \
+  optimistresearch init ~       # or plain `optimistresearch init ~` after pip install
+```
+
+Alternatively, pass keys in the client's `env` block as above (with Claude
+Code, `claude mcp add -e OPENAI_API_KEY=... optimistresearch -- ...`), or point
+`OPTIMISTRESEARCH_CONFIG_FILE` at a YAML file.
 
 Then ask the agent in plain language:
 

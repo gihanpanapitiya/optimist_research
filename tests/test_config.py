@@ -207,6 +207,16 @@ class TestLoadEnvFiles:
 
         assert os.environ["OR_TEST_KEY"] == "from-shell"
 
+    def test_a_blank_value_does_not_hide_a_real_one(self, monkeypatch, tmp_path):
+        far = write(tmp_path / "far.env", "OR_TEST_KEY=real\n")
+        near = write(tmp_path / "near.env", "OR_TEST_KEY=\n")
+        monkeypatch.setitem(Settings.model_config, "env_file", (str(far), str(near)))
+        monkeypatch.setenv("OR_TEST_KEY", "")
+
+        load_env_files()
+
+        assert os.environ["OR_TEST_KEY"] == "real"
+
     def test_missing_files_are_skipped(self, monkeypatch, tmp_path):
         monkeypatch.setitem(
             Settings.model_config, "env_file", (str(tmp_path / "absent.env"),)

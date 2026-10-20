@@ -6,6 +6,25 @@ license = "Apache-2.0"
 license-files = ["LICENSE"]
 readme = "README.md"
 requires-python = ">=3.11"
+authors = [{ name = "Gihan Panapitiya" }]
+keywords = [
+    "llm-agents",
+    "literature-review",
+    "deep-research",
+    "langgraph",
+    "mcp",
+    "evidence-synthesis",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
     "langgraph>=0.2.60",
     "langchain>=0.3.14",
@@ -29,6 +48,11 @@ pdf = ["pymupdf>=1.24"]
 mcp = ["mcp>=2.0"]
 dev = ["pytest>=8.3", "pytest-asyncio>=0.24", "respx>=0.21", "ruff>=0.8"]
 
+[project.urls]
+Homepage = "https://github.com/gihanpanapitiya/optimist_research"
+Repository = "https://github.com/gihanpanapitiya/optimist_research"
+Paper = "https://arxiv.org/abs/2610.23299"
+
 [project.scripts]
 optimistresearch = "optimistresearch.cli:app"
 optimistresearch-mcp = "optimistresearch.mcp_server:main"
@@ -39,6 +63,22 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["optimistresearch"]
+
+# The starter config ships inside the package so `optimistresearch init` can
+# write it out after a plain `pip install`, where there is no checkout.
+[tool.hatch.build.targets.wheel.force-include]
+"optimistresearch.yaml" = "optimistresearch/templates/optimistresearch.yaml"
+".env.example" = "optimistresearch/templates/env.example"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "optimistresearch",
+    "tests",
+    "optimistresearch.yaml",
+    ".env.example",
+    "README.md",
+    "LICENSE",
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -1,6 +1,7 @@
 """Command-line interface.
 
     optimistresearch run "What are the recent developments in planning for AI agents?"
+    optimistresearch init
     optimistresearch sources
     optimistresearch config
 """
@@ -10,13 +11,15 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import shutil
+from pathlib import Path
 
 import typer
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.table import Table
 
-from .config import ALL_SOURCES, get_settings, load_env_files
+from .config import ALL_SOURCES, PROJECT_ROOT, get_settings, load_env_files
 from .runner import run_research, summarize_run
 from .sources.registry import SOURCE_CLASSES
 
@@ -179,6 +182,51 @@ def run(
     console.print()
     console.print(f"[bold]Report:[/bold] {summary['report_path']}")
     console.print(f"[bold]Corpus:[/bold] {summary['corpus_root']}")
+
+
+# Starter files for `init`: (written as, packaged template, file in a checkout).
+# A wheel carries them under templates/; an editable install reads the
+# checkout's own copies instead.
+_TEMPLATES = (
+    ("optimistresearch.yaml", "optimistresearch.yaml", "optimistresearch.yaml"),
+    (".env", "env.example", ".env.example"),
+)
+
+
+def _template(packaged: str, in_checkout: str) -> Path:
+    candidate = Path(__file__).resolve().parent / "templates" / packaged
+    return candidate if candidate.is_file() else PROJECT_ROOT / in_checkout
+
+
+@app.command()
+def init(
+    directory: Path = typer.Argument(
+        Path("."), help="Where to write the files (default: the current directory)."
+    ),
+    force: bool = typer.Option(False, "--force", help="Overwrite files that already exist."),
+) -> None:
+    """Write a starter optimistresearch.yaml and .env to edit.
+
+    Both are found by searching upwards from the working directory, so files
+    written to your home directory apply to every project beneath it.
+    """
+    directory = directory.expanduser().resolve()
+    directory.mkdir(parents=True, exist_ok=True)
+    for written_as, packaged, in_checkout in _TEMPLATES:
+        target = directory / written_as
+        if target.exists() and not force:
+            console.print(f"[yellow]kept[/yellow]    {target} (exists; --force to overwrite)")
+            continue
+        source = _template(packaged, in_checkout)
+        if not source.is_file():
+            console.print(f"[red]missing template[/red] {source}")
+            raise typer.Exit(1)
+        shutil.copyfile(source, target)
+        console.print(f"[green]wrote[/green]   {target}")
+    console.print(
+        "\nNext: put your model provider's API key in .env, choose models in "
+        "optimistresearch.yaml, then check with [bold]optimistresearch config[/bold]."
+    )
 
 
 @app.command()
