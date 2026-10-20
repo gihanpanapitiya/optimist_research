@@ -72,7 +72,7 @@ class TestYamlLayer:
         # Setting one key in a block must not reset the rest of the block.
         assert settings.budget.max_documents_read == 42
         assert settings.budget.max_subquestions == 8
-        assert settings.models.planner.startswith("anthropic:")
+        assert settings.models.planner == "openai:gpt-4o-mini"
 
     def test_enabled_sources_accepts_a_yaml_list(self, tmp_path, yaml_settings):
         config = write(

@@ -122,14 +122,17 @@ class ModelRouting(BaseModel):
     once per document, while planning and criticism run once per iteration.
     """
 
-    planner: str = "anthropic:claude-opus-5"
-    intent: str = "anthropic:claude-sonnet-5"
-    query: str = "anthropic:claude-sonnet-5"
-    screener: str = "anthropic:claude-haiku-4-5-20251001"
-    reader: str = "anthropic:claude-sonnet-5"
-    synthesizer: str = "anthropic:claude-opus-5"
-    critic: str = "anthropic:claude-opus-5"
-    writer: str = "anthropic:claude-opus-5"
+    # Every role defaults to one small, cheap hosted model, matching the
+    # starter optimistresearch.yaml. Route the judgement roles (planner,
+    # synthesizer, critic, writer) to a stronger model there for better reports.
+    planner: str = "openai:gpt-4o-mini"
+    intent: str = "openai:gpt-4o-mini"
+    query: str = "openai:gpt-4o-mini"
+    screener: str = "openai:gpt-4o-mini"
+    reader: str = "openai:gpt-4o-mini"
+    synthesizer: str = "openai:gpt-4o-mini"
+    critic: str = "openai:gpt-4o-mini"
+    writer: str = "openai:gpt-4o-mini"
 
     # Roles where we want near-deterministic structure, vs. roles where a
     # little variation improves coverage of the query space.
