@@ -26,10 +26,12 @@ openai = ["langchain-openai>=0.3.0"]
 google = ["langchain-google-genai>=2.0"]
 ollama = ["langchain-ollama>=1.0"]
 pdf = ["pymupdf>=1.24"]
+mcp = ["mcp>=2.0"]
 dev = ["pytest>=8.3", "pytest-asyncio>=0.24", "respx>=0.21", "ruff>=0.8"]
 
 [project.scripts]
 optimistresearch = "optimistresearch.cli:app"
+optimistresearch-mcp = "optimistresearch.mcp_server:main"
 
 [build-system]
 requires = ["hatchling"]

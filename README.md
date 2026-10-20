@@ -220,6 +220,7 @@ once.
 | `store/evidence.py` | Claim clustering, support and diversity metrics |
 | `store/corpus.py` | On-disk research corpus |
 | `fulltext.py` | PDF fetch + section-aware extraction (gated) |
+| `mcp_server.py` | MCP server for coding agents (`optimistresearch-mcp`) |
 
 ## Output
 
@@ -424,6 +425,61 @@ print(summarize_run(state)["report_path"])
 for item in state["evidence"]:
     print(item.subquestion_id, item.claim, item.doc_id, item.strength)
 ```
+
+## Use from coding agents (MCP)
+
+`optimistresearch-mcp` is a [Model Context Protocol](https://modelcontextprotocol.io)
+server, so coding agents like Claude Code, Cursor or Codex can hand a
+literature question to Optimist Deep Research and read the report back.
+
+```bash
+pip install -e '.[mcp,anthropic]'
+claude mcp add optimistresearch -- optimistresearch-mcp
+```
+
+Or, without installing into the agent's environment, let `uv` run it from a
+checkout:
+
+```bash
+claude mcp add optimistresearch -- \
+  uv run --project /path/to/optimist_research --extra mcp --extra anthropic optimistresearch-mcp
+```
+
+Other clients take the same command in their JSON config:
+
+```json
+{
+  "mcpServers": {
+    "optimistresearch": {
+      "command": "optimistresearch-mcp",
+      "env": { "OPTIMISTRESEARCH_OUTPUT_DIR": "/path/to/research" }
+    }
+  }
+}
+```
+
+| Tool | What it does |
+| --- | --- |
+| `start_research` | Start a run in the background; returns a `run_id` at once |
+| `research_status` | Status, the tail of the research log, and headline numbers when done |
+| `get_report` | The final report, as Markdown |
+| `get_corpus_file` | Any text file in the corpus, e.g. `evidence/claims.md` |
+| `list_research` | Runs in the output directory, newest first |
+| `cancel_research` | Stop a run; the partial corpus stays and can be resumed |
+| `list_sources` | Which literature sources are usable |
+
+A run takes minutes, much longer than an agent should block on one tool call,
+so `start_research` returns immediately and the agent polls `research_status`.
+Only one run is active at a time. The `run_id` is the corpus directory name,
+and status and reports are read from disk, so runs from earlier sessions, or
+ones the CLI wrote, can be looked up the same way.
+
+Configuration is found as for the CLI: `.env` and `optimistresearch.yaml` are
+searched upwards from the working directory and in the project root. The agent
+starts the server in the project you are working in, so the default `research/`
+output lands there. Set `OPTIMISTRESEARCH_OUTPUT_DIR` to keep corpora in one place.
+If the agent's session ends mid-run the run stops with it, but the checkpointed
+corpus survives: `start_research` with `resume: true` picks it up again.
 
 ## Open questions from the methodology
 
