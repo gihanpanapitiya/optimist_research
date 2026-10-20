@@ -475,23 +475,19 @@ which is exactly how three real bugs in these adapters were found.
 
 ## Citation
 
-If you use Optimist Deep Research in your work, please cite the repository:
+If you use Optimist Deep Research in your work, please cite the paper:
 
 ```bibtex
-@software{panapitiya2026optimist,
-  author  = {Panapitiya, Gihan},
-  title   = {Optimist Deep Research},
-  year    = {2026},
-  version = {0.1.0},
-  license = {Apache-2.0},
-  url     = {https://github.com/gihanpanapitiya/optimist_research}
+@misc{panapitiya2026optimistdeepresearchiterative,
+      title={Optimist Deep Research: An Iterative, State-Centric Agent for Autonomous Literature Research},
+      author={Gihan Panapitiya},
+      year={2026},
+      eprint={2610.23299},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/2610.23299},
 }
 ```
-
-The same metadata is in [`CITATION.cff`](CITATION.cff), so GitHub's
-**Cite this repository** button (in the sidebar) gives APA and BibTeX
-versions. A paper describing the system is in preparation; this section will
-be updated with its citation once it is available.
 
 ## Disclaimer
 
