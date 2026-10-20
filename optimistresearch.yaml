@@ -44,7 +44,7 @@ models:
 
   # Fully local alternative. Point every role at ONE model: mixing local
   # models makes Ollama unload and reload between calls, which dominates the
-  # runtime. Verified working with scripts/check_models.py.
+  # runtime.
   #   planner: ollama:gemma4:latest
   #   intent: ollama:gemma4:latest
   #   query: ollama:gemma4:latest

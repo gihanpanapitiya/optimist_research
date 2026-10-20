@@ -1,7 +1,8 @@
 # Optimist Deep Research
 
 An iterative deep-research agent for autonomous literature research, built on
-LangGraph. It implements the methodology in [`plan.md`](plan.md): rather than
+LangGraph. It implements the methodology described in the
+[paper](https://arxiv.org/abs/2610.23299): rather than
 treating literature search as a single retrieval operation, it runs research
 as an **iterative evidence-acquisition process** over an explicit, mutable
 research state.
@@ -210,8 +211,8 @@ need to *know*; a **search intent** says what documents would close that gap.
 Keeping them apart means query phrasings can be rewritten freely without
 disturbing the research objective they serve.
 
-Routing uses **Option 3** from the methodology: select the relevant sources
-first, then generate a query specialized for each. One query string cannot
+Routing selects the relevant sources first, then generates a query
+specialized for each. One query string cannot
 serve arXiv (literal keyword matching, ANDed terms), Semantic Scholar
 (semantic ranking over natural language) and PubMed (controlled vocabulary) at
 once.
@@ -570,7 +571,7 @@ picks it up again.
 
 ## Open questions from the methodology
 
-`plan.md` raises several questions it leaves to testing. Where the code takes a
+The methodology leaves several questions to testing. Where the code takes a
 position, it is a testable one:
 
 **Does subquestion decomposition find more than a single query would?** The
@@ -591,11 +592,9 @@ reconciliation left to the synthesizer. A concept-graph layer would slot in at
 ## Development
 
 ```bash
-pip install -e '.[anthropic,dev,pdf]'
-pytest                              # 250 tests, fully offline
-ruff check optimistresearch tests scripts
-python scripts/smoke_sources.py     # live source check, makes real requests
-python scripts/check_models.py openai:gpt-5.4-mini   # can a model cope?
+pip install -e '.[openai,mcp,pdf,dev]'
+pytest                              # fully offline
+ruff check optimistresearch tests
 ```
 
 `pytest` covers the deterministic machinery — the dedup hierarchy, state
@@ -604,17 +603,16 @@ source parsing against recorded payloads, corpus round-tripping — plus the
 whole graph end to end against a fake model and fake sources. It does not test
 model output quality.
 
-`scripts/check_models.py` runs a candidate model against the real schemas and
-prompts, flagging the failure modes that matter: keeping a deliberately
-off-topic paper, returning `relevant=False` on a relevant one, or copying
-search intents out of the prompt's own examples. It also caught a model
-returning `"RQ1: How do agents..."` where a bare `RQ1` was expected — which
-would have scored every document zero. Use it before trusting a new model.
+Before trusting a new model, run it on a small question and read what it
+did. Check that it rejects a clearly off-topic paper during screening, that the
+claims it extracts are specific to the paper rather than generic, and that the
+search intents it writes are about your question rather than copied from the
+prompts' own examples.
 
-Run `scripts/smoke_sources.py` after touching a source adapter. The scholarly
-APIs reject an entire request rather than ignoring one bad field, so a single
-wrong field name costs a whole source while every offline test still passes —
-which is exactly how three real bugs in these adapters were found.
+After touching a source adapter, make a real request to that source as well.
+The scholarly APIs reject an entire request rather than ignoring one bad
+field, so a single wrong field name costs a whole source while every offline
+test still passes.
 
 ## Citation
 
