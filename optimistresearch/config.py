@@ -377,3 +377,41 @@ def get_settings(refresh: bool = False) -> Settings:
     if _settings is None or refresh:
         _settings = Settings()
     return _settings
+
+
+def configure(**overrides: Any) -> Settings:
+    """Rebuild the settings singleton with ``overrides`` above every other layer.
+
+    This is the programmatic counterpart of the CLI's flags::
+
+        configure(budget={"max_documents_read": 10}, enabled_sources="openalex,arxiv")
+
+    Nested blocks merge rather than replace, so overriding one budget key
+    keeps the rest from the YAML. The overrides last until the next
+    ``configure`` or ``get_settings(refresh=True)``.
+    """
+    global _settings
+    _settings = Settings(**overrides)
+    return _settings
+
+
+def load_env_files() -> None:
+    """Export the discovered ``.env`` files into ``os.environ``.
+
+    Settings read ``OPTIMISTRESEARCH_*`` from ``.env`` themselves, but the
+    provider SDKs read their keys (``OPENAI_API_KEY`` and so on) from the
+    process environment, which pydantic-settings never writes to. Without
+    this a script that has a perfectly good ``.env`` fails for want of a key.
+
+    Variables already in the environment win, and a nearer file wins over a
+    farther one, matching how settings resolve.
+    """
+    from dotenv import load_dotenv
+
+    files = Settings.model_config.get("env_file") or ()
+    if isinstance(files, (str, Path)):
+        files = (files,)
+    # Nearest first: with override=False the first file to set a key keeps it.
+    for path in reversed(tuple(files)):
+        if Path(path).is_file():
+            load_dotenv(path, override=False)

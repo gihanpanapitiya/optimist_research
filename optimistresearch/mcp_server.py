@@ -19,17 +19,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import sys
-from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from dotenv import load_dotenv
 from mcp.server.mcpserver import MCPServer
 
-from .config import ALL_SOURCES, get_settings
+from .config import ALL_SOURCES, configure, get_settings, load_env_files
 from .runner import run_research, summarize_run
 from .store.corpus import ResearchCorpus
 
@@ -73,28 +70,6 @@ def _active_run() -> _Run | None:
 
 def _output_root() -> Path:
     return Path(get_settings().output_dir).expanduser().resolve()
-
-
-@contextmanager
-def _overrides(values: dict[str, str]):
-    """Apply per-run settings overrides the way the CLI's flags do.
-
-    Settings are a process-wide singleton read throughout the graph, so the
-    overrides go in through the environment and the singleton is rebuilt.
-    The environment is restored afterwards; the rebuilt singleton keeps the
-    values for the run, and the next ``start_research`` rebuilds it again.
-    """
-    previous = {key: os.environ.get(key) for key in values}
-    os.environ.update(values)
-    try:
-        get_settings(refresh=True)
-        yield
-    finally:
-        for key, old in previous.items():
-            if old is None:
-                os.environ.pop(key, None)
-            else:
-                os.environ[key] = old
 
 
 async def _execute(run: _Run, scope_notes: str, resume: bool) -> None:
@@ -153,26 +128,28 @@ async def start_research(
             "(research_status) or call cancel_research first."
         )
 
-    values: dict[str, str] = {}
+    # Settings are a process-wide singleton read throughout the graph, so each
+    # run rebuilds it: this run's overrides apply, and the last run's do not.
+    budget: dict[str, int] = {}
     if max_documents is not None:
-        values["OPTIMISTRESEARCH_BUDGET__MAX_DOCUMENTS_READ"] = str(max_documents)
+        budget["max_documents_read"] = max_documents
     if max_iterations is not None:
-        values["OPTIMISTRESEARCH_BUDGET__MAX_RESEARCH_ITERATIONS"] = str(max_iterations)
+        budget["max_research_iterations"] = max_iterations
+    overrides: dict[str, Any] = {"budget": budget} if budget else {}
     if full_text:
-        values["OPTIMISTRESEARCH_READ_FULL_TEXT"] = "true"
+        overrides["read_full_text"] = True
+    settings = configure(**overrides)
 
-    with _overrides(values):
-        settings = get_settings()
-        available = settings.available_sources()
-        if not available:
-            raise ValueError(
-                "no literature sources are available. Check "
-                "OPTIMISTRESEARCH_ENABLED_SOURCES and required API keys."
-            )
-        corpus = ResearchCorpus(settings.output_dir, question)
-        run = _Run(run_id=corpus.root.name, question=question, corpus_root=corpus.root)
-        run.task = asyncio.create_task(_execute(run, scope_notes, resume))
-        _runs[run.run_id] = run
+    available = settings.available_sources()
+    if not available:
+        raise ValueError(
+            "no literature sources are available. Check "
+            "OPTIMISTRESEARCH_ENABLED_SOURCES and required API keys."
+        )
+    corpus = ResearchCorpus(settings.output_dir, question)
+    run = _Run(run_id=corpus.root.name, question=question, corpus_root=corpus.root)
+    run.task = asyncio.create_task(_execute(run, scope_notes, resume))
+    _runs[run.run_id] = run
 
     return {
         "run_id": run.run_id,
@@ -318,7 +295,7 @@ async def list_sources() -> list[dict[str, Any]]:
 
 
 def main() -> None:
-    load_dotenv()
+    load_env_files()
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(name)s %(levelname)s %(message)s",

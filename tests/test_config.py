@@ -7,9 +7,19 @@ be overridden for a single run by a CLI flag (which sets an env var).
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
-from optimistresearch.config import CONFIG_FILENAMES, PROJECT_ROOT, Settings, _discover
+from optimistresearch.config import (
+    CONFIG_FILENAMES,
+    PROJECT_ROOT,
+    Settings,
+    _discover,
+    configure,
+    get_settings,
+    load_env_files,
+)
 
 
 @pytest.fixture
@@ -147,6 +157,61 @@ class TestDiscovery:
 
     def test_both_yaml_extensions_are_recognized(self):
         assert CONFIG_FILENAMES == ("optimistresearch.yaml", "optimistresearch.yml")
+
+
+class TestConfigure:
+    def test_overrides_merge_into_nested_blocks(self, tmp_path, yaml_settings):
+        yaml_settings(
+            write(
+                tmp_path / "optimistresearch.yaml",
+                "budget:\n  max_documents_read: 40\n  max_search_operations: 7\n",
+            )
+        )
+        settings = configure(budget={"max_documents_read": 5})
+        assert settings.budget.max_documents_read == 5
+        assert settings.budget.max_search_operations == 7
+        assert get_settings() is settings
+
+    def test_overrides_beat_the_environment(self, yaml_settings):
+        yaml_settings(OPTIMISTRESEARCH_READ_FULL_TEXT="false")
+        assert configure(read_full_text=True).read_full_text is True
+
+    def test_a_refresh_drops_the_overrides(self, yaml_settings):
+        yaml_settings()
+        configure(budget={"max_documents_read": 5})
+        assert get_settings(refresh=True).budget.max_documents_read != 5
+
+
+class TestLoadEnvFiles:
+    def test_keys_reach_the_process_environment(self, monkeypatch, tmp_path):
+        far = write(tmp_path / "far.env", "OR_TEST_KEY=far\nOR_TEST_ONLY_FAR=yes\n")
+        near = write(tmp_path / "near.env", "OR_TEST_KEY=near\n")
+        monkeypatch.setitem(Settings.model_config, "env_file", (str(far), str(near)))
+        # Registered so monkeypatch removes whatever load_env_files sets.
+        monkeypatch.setenv("OR_TEST_KEY", "")
+        monkeypatch.setenv("OR_TEST_ONLY_FAR", "")
+        monkeypatch.delenv("OR_TEST_KEY")
+        monkeypatch.delenv("OR_TEST_ONLY_FAR")
+
+        load_env_files()
+
+        assert os.environ["OR_TEST_KEY"] == "near"
+        assert os.environ["OR_TEST_ONLY_FAR"] == "yes"
+
+    def test_the_real_environment_wins(self, monkeypatch, tmp_path):
+        env = write(tmp_path / ".env", "OR_TEST_KEY=from-file\n")
+        monkeypatch.setitem(Settings.model_config, "env_file", (str(env),))
+        monkeypatch.setenv("OR_TEST_KEY", "from-shell")
+
+        load_env_files()
+
+        assert os.environ["OR_TEST_KEY"] == "from-shell"
+
+    def test_missing_files_are_skipped(self, monkeypatch, tmp_path):
+        monkeypatch.setitem(
+            Settings.model_config, "env_file", (str(tmp_path / "absent.env"),)
+        )
+        load_env_files()
 
 
 class TestSubquestionIdResolution:

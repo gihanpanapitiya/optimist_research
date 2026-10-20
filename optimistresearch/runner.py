@@ -12,7 +12,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from .config import get_settings
+from .config import get_settings, load_env_files
 from .graph import build_graph
 from .sources.base import close_http_client
 from .state import BudgetUsage, ResearchState, new_state
@@ -36,7 +36,11 @@ async def run_research(
 
     The corpus is written after every node, so an interrupted run leaves a
     usable partial corpus on disk rather than nothing.
+
+    ``on_progress(event, snapshot)`` is called after every graph step with the
+    full research state; ``snapshot["log"]`` is the cumulative research log.
     """
+    load_env_files()
     settings = get_settings()
     corpus = ResearchCorpus(output_dir or settings.output_dir, question)
     corpus.ensure()

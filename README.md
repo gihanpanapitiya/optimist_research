@@ -1,4 +1,4 @@
-# Optimist Deep Research (`optimistresearch`)
+# Optimist Deep Research
 
 An iterative deep-research agent for autonomous literature research, built on
 LangGraph. It implements the methodology in [`plan.md`](plan.md): rather than
@@ -345,24 +345,6 @@ reload, and that dominates the runtime. Set every role to the same model and
 keep `max_concurrent_readers` low, since Ollama serializes anyway and a wide
 fan-out only queues requests.
 
-#### What to pick
-
-Measured against this system's real schemas and prompts (planning, screening,
-evidence extraction, criticism) on an M3 Max:
-
-| Model | Size | Verdict |
-| --- | --- | --- |
-| `gemma4:latest` | 9.6 GB | **Best of those tested.** Grounded its critique in the actual research state and proposed a plan edit |
-| `mistral-small3.1` | 15 GB | Works. Leaked a verbatim example from the critic prompt as a search intent |
-| `gpt-oss:latest` | 13 GB | **Avoid.** Judged an obviously relevant paper irrelevant, extracting zero evidence |
-| `llama3.1`, `mistral`, `phi3`, `gemma2` | ≤5 GB | Too weak for the nested schemas |
-
-The useful test is not a leaderboard. Screen a known-irrelevant paper and see
-if the model rejects it, and extract evidence from a paper you know well and
-see whether the claims are specific and the strengths honest. `gpt-oss` passed
-the screening test and failed the extraction one, which no general benchmark
-would have told you.
-
 #### Tuning for local inference
 
 Expect roughly 30–45 minutes for a small run (8 documents, 2 iterations) at
@@ -414,17 +396,70 @@ optimistresearch run "..." --full-text
 
 ## Programmatic use
 
+Call the agent from a Python script, or wrap it as a tool in your own agent:
+
 ```python
+import asyncio
+
+from optimistresearch.config import configure
 from optimistresearch.runner import run_research, summarize_run
 
-state = await run_research(
-    "How do LLM agents recover from planning failures?",
-    scope_notes="Focus on empirical evaluations since 2023.",
+# Optional per-run overrides, the counterpart of the CLI flags. Anything not
+# given comes from optimistresearch.yaml, .env and OPTIMISTRESEARCH_* as usual.
+configure(
+    budget={"max_documents_read": 20, "max_research_iterations": 2},
+    enabled_sources="openalex,arxiv",
+    read_full_text=False,
+    output_dir="research",
 )
-print(summarize_run(state)["report_path"])
-for item in state["evidence"]:
-    print(item.subquestion_id, item.claim, item.doc_id, item.strength)
+
+seen = 0
+
+def on_progress(event: str, snapshot: dict) -> None:
+    """Print new research-log lines; called after every graph step."""
+    global seen
+    log = snapshot.get("log") or []
+    for line in log[seen:]:
+        print(line)
+    seen = len(log)
+
+async def main() -> None:
+    state = await run_research(
+        "How do LLM agents recover from planning failures?",
+        scope_notes="Focus on empirical evaluations since 2023.",
+        on_progress=on_progress,
+    )
+    summary = summarize_run(state)
+    print(summary["report_path"], summary["documents_read"], "documents read")
+
+    print(state["final_report"][:500])
+    for item in state["evidence"]:
+        doc = state["documents"][item.doc_id]
+        print(item.subquestion_id, item.strength, item.claim, "--", doc.title, doc.doi)
+
+asyncio.run(main())
 ```
+
+`run_research` loads `.env` itself, using the same search as the settings
+(upwards from the working directory, then the project root), so provider keys
+such as `OPENAI_API_KEY` are picked up wherever the script runs. Keys already
+in the environment win. In a notebook, drop `asyncio.run` and `await
+run_research(...)` directly.
+
+The returned state is a dict. The useful keys:
+
+| Key | Contents |
+| --- | --- |
+| `final_report` | The report, as Markdown |
+| `evidence` | List of `Evidence`: `claim`, `support`, `doc_id`, `subquestion_id`, `evidence_type`, `strength` (0–1), `verbatim_quote` |
+| `documents` | `doc_id` → `Document`: `title`, `authors`, `year`, `venue`, `doi`, `url`, `abstract`, `status` |
+| `subquestions` | Research-plan id (`RQ1`, ...) → `Subquestion`, with its `coverage` |
+| `contradictions` | Conflicting claims the critic found |
+| `terminated_because` | Why the run stopped |
+
+`summarize_run(state)` gives the headline numbers and the `report_path` and
+`corpus_root` on disk; the files there are listed under [Output](#output).
+Settings are process-wide, so run one research job per process at a time.
 
 ## Use from coding agents (MCP)
 
@@ -452,11 +487,30 @@ Other clients take the same command in their JSON config:
   "mcpServers": {
     "optimistresearch": {
       "command": "optimistresearch-mcp",
-      "env": { "OPTIMISTRESEARCH_OUTPUT_DIR": "/path/to/research" }
+      "env": {
+        "OPENAI_API_KEY": "sk-...",
+        "OPTIMISTRESEARCH_CONTACT_EMAIL": "you@example.org",
+        "OPTIMISTRESEARCH_OUTPUT_DIR": "/path/to/research"
+      }
     }
   }
 }
 ```
+
+**API keys.** The server reads the same `.env` as the CLI: it searches upwards
+from the directory the agent starts it in, then the checkout the package was
+installed from with `pip install -e` or `uv run --project`. With a regular,
+non-editable install there is no checkout to fall back to, so pass the keys in
+the client's `env` block as above (with Claude Code, `claude mcp add -e
+OPENAI_API_KEY=... optimistresearch -- optimistresearch-mcp`). Model routing and
+budgets come from `optimistresearch.yaml`, found the same way, or from
+`OPTIMISTRESEARCH_CONFIG_FILE`.
+
+Then ask the agent in plain language:
+
+> Use optimistresearch to research how LLM agents recover from planning
+> failures, limited to 20 documents. When it's done, summarise the main
+> findings and list the five strongest supporting papers.
 
 | Tool | What it does |
 | --- | --- |
@@ -468,18 +522,21 @@ Other clients take the same command in their JSON config:
 | `cancel_research` | Stop a run; the partial corpus stays and can be resumed |
 | `list_sources` | Which literature sources are usable |
 
-A run takes minutes, much longer than an agent should block on one tool call,
-so `start_research` returns immediately and the agent polls `research_status`.
-Only one run is active at a time. The `run_id` is the corpus directory name,
-and status and reports are read from disk, so runs from earlier sessions, or
-ones the CLI wrote, can be looked up the same way.
+`start_research` takes the question plus optional `scope_notes`,
+`max_documents`, `max_iterations`, `full_text` and `resume`.
 
-Configuration is found as for the CLI: `.env` and `optimistresearch.yaml` are
-searched upwards from the working directory and in the project root. The agent
-starts the server in the project you are working in, so the default `research/`
-output lands there. Set `OPTIMISTRESEARCH_OUTPUT_DIR` to keep corpora in one place.
-If the agent's session ends mid-run the run stops with it, but the checkpointed
-corpus survives: `start_research` with `resume: true` picks it up again.
+A run takes minutes, much longer than an agent should block on one tool call,
+so `start_research` returns immediately and the agent checks `research_status`
+until the run reports `completed` (the server's instructions tell it to check
+about once a minute). Only one run is active at a time. The `run_id` is the
+corpus directory name, and status and reports are read from disk, so runs from
+earlier sessions, or ones the CLI wrote, can be looked up the same way.
+
+The agent starts the server in the project you are working in, so the default
+`research/` output lands there. Set `OPTIMISTRESEARCH_OUTPUT_DIR` to keep
+corpora in one place. If the agent's session ends mid-run the run stops with
+it, but the checkpointed corpus survives: `start_research` with `resume: true`
+picks it up again.
 
 ## Open questions from the methodology
 

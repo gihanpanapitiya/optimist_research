@@ -62,13 +62,14 @@ async def test_run_lifecycle(wired):
     assert listed[0]["status"] == "completed"
 
 
-async def test_overrides_do_not_leak_into_environment(wired, monkeypatch):
-    monkeypatch.delenv("OPTIMISTRESEARCH_BUDGET__MAX_DOCUMENTS_READ", raising=False)
-    started = await mcp_server.start_research(QUESTION, max_documents=3)
-    await _finish(started["run_id"])
-    import os
+async def test_overrides_do_not_carry_over_to_the_next_run(wired):
+    first = await mcp_server.start_research(QUESTION, max_documents=3)
+    assert first["budget"]["max_documents_read"] == 3
+    await _finish(first["run_id"])
 
-    assert "OPTIMISTRESEARCH_BUDGET__MAX_DOCUMENTS_READ" not in os.environ
+    second = await mcp_server.start_research("A different question", max_iterations=1)
+    assert second["budget"]["max_documents_read"] != 3
+    await _finish(second["run_id"])
 
 
 async def test_completed_run_is_found_from_disk_after_restart(wired):

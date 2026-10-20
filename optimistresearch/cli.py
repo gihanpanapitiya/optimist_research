@@ -12,12 +12,11 @@ import logging
 import os
 
 import typer
-from dotenv import load_dotenv
 from rich.console import Console
 from rich.logging import RichHandler
 from rich.table import Table
 
-from .config import ALL_SOURCES, get_settings
+from .config import ALL_SOURCES, get_settings, load_env_files
 from .runner import run_research, summarize_run
 from .sources.registry import SOURCE_CLASSES
 
@@ -74,7 +73,7 @@ def run(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Debug logging."),
 ) -> None:
     """Investigate a research question and write a literature report."""
-    load_dotenv()
+    load_env_files()
     _setup_logging(verbose)
 
     # CLI flags win over the environment, so apply them before settings load.
@@ -185,7 +184,7 @@ def run(
 @app.command()
 def sources() -> None:
     """Show which literature sources are configured and usable."""
-    load_dotenv()
+    load_env_files()
     settings = get_settings(refresh=True)
     from .nodes.common import SOURCE_DESCRIPTIONS
 
@@ -233,7 +232,7 @@ def sources() -> None:
 @app.command()
 def config() -> None:
     """Show the effective configuration and where each layer came from."""
-    load_dotenv()
+    load_env_files()
     settings = get_settings(refresh=True)
 
     console.print("[bold]Configuration layers[/bold] (lowest precedence first)")
