@@ -569,6 +569,27 @@ corpora in one place. If the agent's session ends mid-run the run stops with
 it, but the checkpointed corpus survives: `start_research` with `resume: true`
 picks it up again.
 
+## Use as a Claude Code skill
+
+[`skills/optimistresearch/SKILL.md`](skills/optimistresearch/SKILL.md) is the
+lighter alternative to the MCP server: no server to register, just the CLI.
+Claude runs `optimistresearch run` in the background, reads the corpus back
+when the run finishes, and answers from the report and evidence store with
+citations.
+
+```bash
+mkdir -p ~/.claude/skills/optimistresearch
+curl -fsSL -o ~/.claude/skills/optimistresearch/SKILL.md \
+  https://raw.githubusercontent.com/gihanpanapitiya/optimist_research/main/skills/optimistresearch/SKILL.md
+```
+
+Use `.claude/skills/` inside a project instead of `~/.claude/skills/` to
+enable the skill for that project only. The skill uses an installed
+`optimistresearch` if there is one and falls back to `uvx` otherwise. API keys
+are set up the same way as for the MCP server (`optimistresearch init ~`).
+Invoke the skill with `/optimistresearch <question>`, or just ask for a
+literature review and Claude will pick it up.
+
 ## Open questions from the methodology
 
 The methodology leaves several questions to testing. Where the code takes a
